@@ -209,12 +209,9 @@ class Screen:
     def MoveCamera(self,direction):
         self.cameraPos+=direction
     def ZoomCameraAt(self,amount,position):
-        #(position-self.cameraPos)*scale
         pos = position+pygame.Vector2(1,1)/2
-        C=(self.cameraPos-pos)*self.scale
         self.scale*=amount
-        self.cameraPos = pos + C/self.scale
-        #self.cameraPos+=-position+position/amount
+        self.cameraPos = pos + (self.cameraPos-pos)/amount
     def MoveCameraTo(self,pos):
         self.cameraPos=pos
     def actualDrawText(self,i):
