@@ -28,6 +28,7 @@ class Wave:
         self.incoming += incoming
     def preUpdate(self):
         self.updateFacing()
+        self.updated=False
         pass
     def postUpdate(self):
         self.outgoing=self.incoming
@@ -117,6 +118,7 @@ class WaveArray:
                 if key in v:
                     self.selected+=pygame.Vector2(v[key])
                     self.selected = pygame.Vector2(self.selected[0]%self.size,self.selected[1]%self.size)
+                    screen.MoveCamera(pygame.Vector2(v[key]))
                 d = {100:0,115:1,97:2,119:3}
                 if key in d:
                     selWave.ToggleDirection(d[key])
@@ -161,7 +163,7 @@ class WaveArray:
         #     for x in y:
         #         x.postUpdate()
         for p in self.newUpdateList.union(self.updateList):
-            self.array[p[0],p[1]].postUpdate()
+            self.getWave(p).postUpdate()
     def getWave(self,pos):
         return self.array[int(pos[0]%self.size),int(pos[1])%self.size]
 
@@ -176,15 +178,38 @@ class Screen:
         self.textDrawBuffer=[]
         self.textMemory={}
         self.textColor=(0,100,200)
+        self.cameraPos=pygame.Vector2(0,0)
     def DrawText(self,pos,text,color):
         self.textDrawBuffer.append((pos,text,color))
     def getText(self,text,color):
         return self.textMemory.setdefault((text,color),self.font.render(text, False, color))
+    def getSize(self):
+        return pygame.Vector2(1,1)*self.canvas.get_width()/self.scale
+    def CameraTransformPos(self,position):
+        pos=position+pygame.Vector2(1,1)/2
+        v=self.getSize()/2
+        a=(pos-self.cameraPos)
+        #l = (a-v).magnitude()
+        b=a #v+(a-v)*(l**(1/2))
+        c=b*self.scale
+        return c
+    def CameraTransformScale(self,position,scale):
+        pos=position+pygame.Vector2(1,1)/2
+        #v=self.getSize()/2
+        #a=(pos-self.cameraPos)
+        #l = (a-v).magnitude()
+        return scale*self.scale#*(5/(l+1))
+    def MoveCamera(self,direction):
+        self.cameraPos+=direction
+    def MoveCameraTo(self,pos):
+        self.cameraPos=pos
     def actualDrawText(self,i):
         pos,text,color = i
         t=self.getText(text,color)
-        posS=(pos+pygame.Vector2(1,1)/4)*self.scale
-        self.canvas.blit(t,posS)
+        posS=self.CameraTransformPos(pos)#-pygame.Vector2(1,1)/4
+        sc=self.CameraTransformScale(pos, 1/2)
+        tS=pygame.transform.scale(t,(int(sc),int(sc*t.get_height()/t.get_width())))
+        self.canvas.blit(tS,posS-sc*pygame.Vector2(1,t.get_height()/t.get_width())/2)
         return
     def clearTextBuffer(self):
         self.textDrawBuffer.clear()
@@ -193,29 +218,32 @@ class Screen:
         self.DrawSelector(waveArray.selected)
         for y in range(waveArray.size):
             for x in range(waveArray.size):
-                self.DrawWave(waveArray.array[x,y],pygame.Vector2(x,y))
+                self.DrawWave(waveArray.getWave((x,y)),pygame.Vector2(x,y))
         self.canvas.unlock()
         for d in self.textDrawBuffer:
             self.actualDrawText(d)
         self.clearTextBuffer()
     def DrawWave(self,wave,pos):
-        posS=(pos+pygame.Vector2(1/2,1/2))*self.scale
+        posS=self.CameraTransformPos(pos)
         color=(100*min(wave.getValue(),2),50,50)
         color2=(0,100*min(wave.getDefault(),2),50*min(wave.getDefault(),5))
         for i in range(4):
             if wave.directions[i]:
-                diff=Wave.Vector(i)*self.scale//2
-                pygame.draw.line(self.canvas,color,posS,posS+diff//1,self.scale//6)
-        pygame.draw.circle(self.canvas,color2,(int(posS.x),int(posS.y)),self.scale//8)
+                posEnd=self.CameraTransformPos(pos+Wave.Vector(i)/2)
+                self.DrawLine(posS, posEnd, color, self.CameraTransformScale(pos, 1/6))
+        self.DrawCircle(posS, color2, self.CameraTransformScale(pos, 1/8))
         if wave.getOutgoing():
             self.DrawText(pos, str(wave.getOutgoing()), color)
     def DrawSelector(self,pos):
-        posS=(pos+pygame.Vector2(1/2,1/2))*self.scale
+        posS=self.CameraTransformPos(pos)
         color=(200,200,200)
-        pygame.draw.circle(self.canvas,color,(int(posS[0]),int(posS[1])),self.scale//4)
+        self.DrawCircle(posS, color, self.CameraTransformScale(pos, 1/4))
     def Clear(self):
         self.canvas.fill((100,100,100))
-    
+    def DrawLine(self,A,B,color,width):
+        pygame.draw.line(self.canvas,color,vectorInt(A),vectorInt(B),int(width))
+    def DrawCircle(self,pos,color,radius):
+        pygame.draw.circle(self.canvas,color,vectorInt(pos),int(radius))
 
     def Loop(self,waveArray,timer=200):
         run=True
@@ -230,6 +258,8 @@ class Screen:
             pygame.display.update()
 
 
+def vectorInt(v):
+    return (int(v[0]),int(v[1]))
 
 scale = 60
 height = 15
