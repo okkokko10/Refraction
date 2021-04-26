@@ -75,6 +75,7 @@ class WaveArray:
         self.selected=pygame.Vector2(size//2,size//2)
         self.updateList=set()
         self.newUpdateList=set()
+        self.followSelected=False
     def Reset(self,defaultDirection=4):
         for x in range(self.size):
             for y in range(self.size):
@@ -118,7 +119,8 @@ class WaveArray:
                 if key in v:
                     self.selected+=pygame.Vector2(v[key])
                     self.selected = pygame.Vector2(self.selected[0]%self.size,self.selected[1]%self.size)
-                    screen.MoveCamera(pygame.Vector2(v[key]))
+                    if self.followSelected:
+                        screen.MoveCamera(pygame.Vector2(v[key]))
                 d = {100:0,115:1,97:2,119:3}
                 if key in d:
                     selWave.ToggleDirection(d[key])
@@ -127,6 +129,13 @@ class WaveArray:
                 if key in u:
                     selWave.ChangeDefault(u[key])
                     self.AddUpdate(self.selected[0],self.selected[1])
+                if key==99:
+                    self.followSelected = not self.followSelected
+                if key==116:#t
+                    screen.ZoomCameraAt(0.5,self.selected)
+                if key==103:#g
+                    screen.ZoomCameraAt(2,self.selected)
+
         self.updateList=self.newUpdateList.copy()
         self.newUpdateList.clear()
         # for y in range(self.size):
@@ -189,9 +198,7 @@ class Screen:
         pos=position+pygame.Vector2(1,1)/2
         v=self.getSize()/2
         a=(pos-self.cameraPos)
-        #l = (a-v).magnitude()
-        b=a #v+(a-v)*(l**(1/2))
-        c=b*self.scale
+        c=a*self.scale
         return c
     def CameraTransformScale(self,position,scale):
         pos=position+pygame.Vector2(1,1)/2
@@ -201,6 +208,13 @@ class Screen:
         return scale*self.scale#*(5/(l+1))
     def MoveCamera(self,direction):
         self.cameraPos+=direction
+    def ZoomCameraAt(self,amount,position):
+        #(position-self.cameraPos)*scale
+        pos = position+pygame.Vector2(1,1)/2
+        C=(self.cameraPos-pos)*self.scale
+        self.scale*=amount
+        self.cameraPos = pos + C/self.scale
+        #self.cameraPos+=-position+position/amount
     def MoveCameraTo(self,pos):
         self.cameraPos=pos
     def actualDrawText(self,i):
@@ -261,8 +275,8 @@ class Screen:
 def vectorInt(v):
     return (int(v[0]),int(v[1]))
 
-scale = 60
-height = 15
-timer = 40
-a = WaveArray(height,True)
-Screen(scale,scale*height).Loop(a,timer)
+_scale = 60
+_height = 15
+_timer = 40
+a = WaveArray(_height,True)
+Screen(_scale,_scale*_height).Loop(a,_timer)
