@@ -11,14 +11,9 @@ class Wave:
         self.facing=set()
         self.default=default
         self.updated=True
+        self.resettable=False
     def AddUpdate(self):
         self.updated=True
-    def ResolveUpdate(self):
-        if self.updated:
-            self.updated=False
-            return True
-        else:
-            return False
     @staticmethod
     def Vector(direction=4):
         return pygame.Vector2([(1,0),(0,1),(-1,0),(0,-1),(0,0)][direction])
@@ -28,12 +23,12 @@ class Wave:
         self.incoming += incoming
     def preUpdate(self):
         self.updateFacing()
-        self.updated=False
         pass
     def postUpdate(self):
         self.outgoing=self.incoming
         #self.incoming=self.default
         self.value=self.getOutgoing()
+        self.updated=False
         pass
     def getValue(self):
         return max(0,self.value)
@@ -65,36 +60,28 @@ class Wave:
         return self.oldFacing.difference(self.facing)
     def turnUp(self):
         self.directions=[False,False,False,False]
+    def IsDirected(self):
+        return True in self.directions
+    def IsResettable(self):
+        return not ((self.IsDirected()) or self.getOutgoing())
+    
 class WaveArray:
-    def __init__(self,size,wrapAround=False,limitless=False):
-        self.size=size
+    def __init__(self):
         #self.array.fill(Wave())
-        self.wrapAround=wrapAround
         self.selected=pygame.Vector2(0,0)
         self.updateList=set()
         self.newUpdateList=set()
         self.followSelected=False
         self.updating=True
         self.updatingOnce=False
-        self.limitless=limitless
-        if limitless:
-            self.ResetLimitless()
-        else:
-            self.Reset()
-    def Reset(self,defaultDirection=4):
-        self.array=np.ndarray((self.size,self.size),Wave)
-        for x in range(self.size):
-            for y in range(self.size):
-                self.array[x,y]=Wave()
-    def ResetLimitless(self):
         self.arrayLimitless={}
-    def __str__(self):
-        out=''
-        for y in self.array:
-            for x in y:
-                out+=str(x)+' '
-            out+='\n'
-        return out
+    def Reset(self):
+        removable=[]
+        for p in self.arrayLimitless:
+            if self.arrayLimitless[p].IsResettable():
+                removable.append(p)
+        for p in removable:
+            del self.arrayLimitless[p]
     def AddUpdate(self,x,y):
         x=int(x)
         y=int(y)
@@ -119,10 +106,9 @@ class WaveArray:
                 #     elif button==6:#disable
                 #         wave.turnUp()
             if e.type == pygame.KEYDOWN:
-                #print(e)
+                print(e)
                 key = e.__dict__['key']
                 #   273^    275>    274v    276<
-                selWave=self.getWave(self.selected)
                 v={273:(0,-1),274:(0,1),275:(1,0),276:(-1,0)}
                 if key in v:
                     self.selected+=pygame.Vector2(v[key])
@@ -131,11 +117,11 @@ class WaveArray:
                         screen.MoveCamera(pygame.Vector2(v[key]))
                 d = {100:0,115:1,97:2,119:3}
                 if key in d:
-                    selWave.ToggleDirection(d[key])
+                    self.getWave(self.selected).ToggleDirection(d[key])
                     self.AddUpdate(self.selected[0],self.selected[1])
                 u = {114:1,102:-1}
                 if key in u:
-                    selWave.ChangeDefault(u[key])
+                    self.getWave(self.selected).ChangeDefault(u[key])
                     self.AddUpdate(self.selected[0],self.selected[1])
                 if key==99:
                     self.followSelected = not self.followSelected
@@ -147,6 +133,8 @@ class WaveArray:
                     self.updating=not self.updating
                 if key==104:#h
                     self.updatingOnce=True
+                if key==98:#b
+                    self.Reset()
         if self.updating or self.updatingOnce:
             self.updatingOnce=False
             self.updateList=self.newUpdateList.copy()
@@ -170,16 +158,11 @@ class WaveArray:
             for p in self.newUpdateList.union(self.updateList):
                 self.getWave(p).postUpdate()
     def getWave(self,pos,update=True):
-        if self.limitless:
-            if update:
-                return self.arrayLimitless.setdefault((vectorInt(pos)),Wave())
-            else:
-                if vectorInt(pos) in self.arrayLimitless:
-                    return self.arrayLimitless[vectorInt(pos)]
-        # if (0<=pos[0]<self.size and 0<=pos[1]<self.size) or wrapAround:
-        #     return self.array[int(pos[0]%self.size),int(pos[1])%self.size]
-        # else:
-        #     return False
+        if update:
+            return self.arrayLimitless.setdefault((vectorInt(pos)),Wave())
+        else:
+            if vectorInt(pos) in self.arrayLimitless:
+                return self.arrayLimitless[vectorInt(pos)]
 
 
     
@@ -251,7 +234,7 @@ class Screen:
             self.actualDrawText(d)
         self.clearTextBuffer()
     def DrawWave(self,wave,pos):
-        if not wave:
+        if not wave or wave.IsResettable():
             return
         posS=self.CameraTransformPos(pos)
         color=(100*min(wave.getValue(),2),50,50)
@@ -260,9 +243,8 @@ class Screen:
             if wave.directions[i]:
                 posEnd=self.CameraTransformPos(pos+Wave.Vector(i)/2)
                 self.DrawLine(posS, posEnd, color, self.CameraTransformScale(pos, 1/6))
-        if self.drawSettings['unpoweredKnobs'] or wave.getOutgoing():
-            self.DrawCircle(posS, color2, self.CameraTransformScale(pos, #wave.getOutgoing()*
-            1/8))
+        if wave.IsDirected():
+            self.DrawCircle(posS, color2, self.CameraTransformScale(pos,1/8))
         if wave.getOutgoing() and self.drawSettings['text']:
             color3 =color[1],color[2],color[0]
             self.DrawText(pos, str(wave.getOutgoing()), color3)
@@ -297,10 +279,9 @@ def vectorInt(v):
     return (int(v[0]),int(v[1]))
 
 _scale = 60
-_height = 30
 _timer = 40
 _scrSize =800,700
-a = WaveArray(_height,True,True)
+a = WaveArray()
 S=Screen(_scale,_scrSize)
 #S.ChangeSettings('text', False)
 #S.ChangeSettings('unpoweredKnobs', False)
