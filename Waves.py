@@ -2,7 +2,7 @@ import numpy as np
 import pygame
 
 class Wave:
-    def __init__(self,direction=0,default=0):
+    def __init__(self,default=0):
         self.directions=[False,False,False,False]
         self.incoming=0
         self.value=0
@@ -66,20 +66,28 @@ class Wave:
     def turnUp(self):
         self.directions=[False,False,False,False]
 class WaveArray:
-    def __init__(self,size,wrapAround=False):
+    def __init__(self,size,wrapAround=False,limitless=False):
         self.size=size
-        self.array=np.ndarray((size,size),Wave)
         #self.array.fill(Wave())
-        self.Reset()
         self.wrapAround=wrapAround
-        self.selected=pygame.Vector2(size//2,size//2)
+        self.selected=pygame.Vector2(0,0)
         self.updateList=set()
         self.newUpdateList=set()
         self.followSelected=False
+        self.updating=True
+        self.updatingOnce=False
+        self.limitless=limitless
+        if limitless:
+            self.ResetLimitless()
+        else:
+            self.Reset()
     def Reset(self,defaultDirection=4):
+        self.array=np.ndarray((self.size,self.size),Wave)
         for x in range(self.size):
             for y in range(self.size):
-                self.array[x,y]=Wave(defaultDirection)
+                self.array[x,y]=Wave()
+    def ResetLimitless(self):
+        self.arrayLimitless={}
     def __str__(self):
         out=''
         for y in self.array:
@@ -118,7 +126,7 @@ class WaveArray:
                 v={273:(0,-1),274:(0,1),275:(1,0),276:(-1,0)}
                 if key in v:
                     self.selected+=pygame.Vector2(v[key])
-                    self.selected = pygame.Vector2(self.selected[0]%self.size,self.selected[1]%self.size)
+                    #self.selected = pygame.Vector2(self.selected[0]%self.size,self.selected[1]%self.size)
                     if self.followSelected:
                         screen.MoveCamera(pygame.Vector2(v[key]))
                 d = {100:0,115:1,97:2,119:3}
@@ -135,52 +143,49 @@ class WaveArray:
                     screen.ZoomCameraAt(0.5,self.selected)
                 if key==103:#g
                     screen.ZoomCameraAt(2,self.selected)
+                if key==121:#y
+                    self.updating=not self.updating
+                if key==104:#h
+                    self.updatingOnce=True
+        if self.updating or self.updatingOnce:
+            self.updatingOnce=False
+            self.updateList=self.newUpdateList.copy()
+            self.newUpdateList.clear()
+            for x,y in self.updateList:
+                    wave = self.getWave((x,y))
+                    s = int(self.getWave((x,y)).getOutgoing())
 
-        self.updateList=self.newUpdateList.copy()
-        self.newUpdateList.clear()
-        # for y in range(self.size):
-        #     for x in range(self.size):
-        #print(self.updateList)
-        for x,y in self.updateList:
-                wave = self.getWave((x,y))
-                s = int(self.getWave((x,y)).getOutgoing())
-                if s>0 and False:
-                    for i in range(4):
-                        if self.array[x,y].directions[i]:
-                            v = Wave.Vector(i)
-                            x1=x+v[0]*s
-                            y1=y+v[1]*s
-                            if self.wrapAround:
-                                x1%=self.size
-                                y1%=self.size
-                            if 0<=x1<self.size and 0<=y1<self.size:
-                                self.array[int(x1),int(y1)].addIncoming(1)
-                
-                wave.preUpdate()
-                for f in wave.getFacingAdded():
-                    x1=int(f[0]+x)
-                    y1=int(f[1]+y)
-                    self.getWave((x1,y1)).addIncoming(1)
-                    self.AddUpdate(x1,y1)
-                for f in wave.getFacingRemoved():
-                    x1=int(f[0]+x)
-                    y1=int(f[1]+y)
-                    self.getWave((x1,y1)).addIncoming(-1)
-                    self.AddUpdate(x1,y1)
+                    wave.preUpdate()
+                    for f in wave.getFacingAdded():
+                        x1=int(f[0]+x)
+                        y1=int(f[1]+y)
+                        self.getWave((x1,y1)).addIncoming(1)
+                        self.AddUpdate(x1,y1)
+                    for f in wave.getFacingRemoved():
+                        x1=int(f[0]+x)
+                        y1=int(f[1]+y)
+                        self.getWave((x1,y1)).addIncoming(-1)
+                        self.AddUpdate(x1,y1)
 
-        # for y in self.array:
-        #     for x in y:
-        #         x.postUpdate()
-        for p in self.newUpdateList.union(self.updateList):
-            self.getWave(p).postUpdate()
-    def getWave(self,pos):
-        return self.array[int(pos[0]%self.size),int(pos[1])%self.size]
+            for p in self.newUpdateList.union(self.updateList):
+                self.getWave(p).postUpdate()
+    def getWave(self,pos,update=True):
+        if self.limitless:
+            if update:
+                return self.arrayLimitless.setdefault((vectorInt(pos)),Wave())
+            else:
+                if vectorInt(pos) in self.arrayLimitless:
+                    return self.arrayLimitless[vectorInt(pos)]
+        # if (0<=pos[0]<self.size and 0<=pos[1]<self.size) or wrapAround:
+        #     return self.array[int(pos[0]%self.size),int(pos[1])%self.size]
+        # else:
+        #     return False
 
 
     
 class Screen:
     def __init__(self,scale,size):
-        self.canvas=pygame.display.set_mode((size,size))
+        self.canvas=pygame.display.set_mode(size)
         self.scale = scale
         pygame.font.init()
         self.font=pygame.font.Font(None,self.scale)
@@ -188,15 +193,24 @@ class Screen:
         self.textMemory={}
         self.textColor=(0,100,200)
         self.cameraPos=pygame.Vector2(0,0)
+        self.Resize()
+        self.drawSettings={'text':True,'knobs':True,'unpoweredKnobs':True}
     def DrawText(self,pos,text,color):
         self.textDrawBuffer.append((pos,text,color))
     def getText(self,text,color):
         return self.textMemory.setdefault((text,color),self.font.render(text, False, color))
+    def Resize(self):
+        self.size = pygame.Vector2(self.canvas.get_width(),self.canvas.get_height())/self.scale
     def getSize(self):
-        return pygame.Vector2(1,1)*self.canvas.get_width()/self.scale
+        return self.size
+    def Visible(self):
+        '''x1,y1,x2,y2'''
+        x1,y1=self.cameraPos
+        x2,y2=self.getSize()
+        return int(x1),int(y1),int(x2)+2,int(y2)+2
     def CameraTransformPos(self,position):
         pos=position+pygame.Vector2(1,1)/2
-        v=self.getSize()/2
+        #v=self.getSize()/2
         a=(pos-self.cameraPos)
         c=a*self.scale
         return c
@@ -212,6 +226,7 @@ class Screen:
         pos = position+pygame.Vector2(1,1)/2
         self.scale*=amount
         self.cameraPos = pos + (self.cameraPos-pos)/amount
+        self.Resize()
     def MoveCameraTo(self,pos):
         self.cameraPos=pos
     def actualDrawText(self,i):
@@ -225,16 +240,19 @@ class Screen:
     def clearTextBuffer(self):
         self.textDrawBuffer.clear()
     def DrawWaveArray(self,waveArray):
+        vis=self.Visible()
         self.canvas.lock()
         self.DrawSelector(waveArray.selected)
-        for y in range(waveArray.size):
-            for x in range(waveArray.size):
-                self.DrawWave(waveArray.getWave((x,y)),pygame.Vector2(x,y))
+        for y in range(vis[1],vis[1]+vis[3]):
+            for x in range(vis[0],vis[0]+vis[2]):
+                self.DrawWave(waveArray.getWave((x,y),False),pygame.Vector2(x,y))
         self.canvas.unlock()
         for d in self.textDrawBuffer:
             self.actualDrawText(d)
         self.clearTextBuffer()
     def DrawWave(self,wave,pos):
+        if not wave:
+            return
         posS=self.CameraTransformPos(pos)
         color=(100*min(wave.getValue(),2),50,50)
         color2=(0,100*min(wave.getDefault(),2),50*min(wave.getDefault(),5))
@@ -242,15 +260,21 @@ class Screen:
             if wave.directions[i]:
                 posEnd=self.CameraTransformPos(pos+Wave.Vector(i)/2)
                 self.DrawLine(posS, posEnd, color, self.CameraTransformScale(pos, 1/6))
-        self.DrawCircle(posS, color2, self.CameraTransformScale(pos, 1/8))
-        if wave.getOutgoing():
-            self.DrawText(pos, str(wave.getOutgoing()), color)
+        if self.drawSettings['unpoweredKnobs'] or wave.getOutgoing():
+            self.DrawCircle(posS, color2, self.CameraTransformScale(pos, #wave.getOutgoing()*
+            1/8))
+        if wave.getOutgoing() and self.drawSettings['text']:
+            color3 =color[1],color[2],color[0]
+            self.DrawText(pos, str(wave.getOutgoing()), color3)
     def DrawSelector(self,pos):
         posS=self.CameraTransformPos(pos)
         color=(200,200,200)
         self.DrawCircle(posS, color, self.CameraTransformScale(pos, 1/4))
     def Clear(self):
         self.canvas.fill((100,100,100))
+    def ChangeSettings(self,setting,value):
+        if setting in self.drawSettings:
+            self.drawSettings[setting]=value
     def DrawLine(self,A,B,color,width):
         pygame.draw.line(self.canvas,color,vectorInt(A),vectorInt(B),int(width))
     def DrawCircle(self,pos,color,radius):
@@ -273,7 +297,11 @@ def vectorInt(v):
     return (int(v[0]),int(v[1]))
 
 _scale = 60
-_height = 15
+_height = 30
 _timer = 40
-a = WaveArray(_height,True)
-Screen(_scale,_scale*_height).Loop(a,_timer)
+_scrSize =800,700
+a = WaveArray(_height,True,True)
+S=Screen(_scale,_scrSize)
+#S.ChangeSettings('text', False)
+#S.ChangeSettings('unpoweredKnobs', False)
+S.Loop(a,_timer)
