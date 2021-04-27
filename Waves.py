@@ -78,15 +78,14 @@ class WaveArray:
     def Reset(self):
         removable=[]
         for p in self.arrayLimitless:
-            if self.arrayLimitless[p].IsResettable():
+            if self.arrayLimitless[p].IsResettable() and not (p in self.newUpdateList):#there might be a bug here if you reset and remove a direction at the same time. Hopefully the second conditional prevents this
                 removable.append(p)
         for p in removable:
             del self.arrayLimitless[p]
-    def AddUpdate(self,x,y):
-        x=int(x)
-        y=int(y)
-        self.newUpdateList.add((x,y))
-        self.getWave((x,y)).AddUpdate()
+    def AddUpdate(self,p):
+        
+        self.newUpdateList.add(vectorInt(p))
+        self.getWave(vectorInt(p)).AddUpdate()
     def Update(self,events,screen):
         for e in events:
             # if e.type == pygame.MOUSEBUTTONDOWN:
@@ -106,7 +105,7 @@ class WaveArray:
                 #     elif button==6:#disable
                 #         wave.turnUp()
             if e.type == pygame.KEYDOWN:
-                print(e)
+                #print(e)
                 key = e.__dict__['key']
                 #   273^    275>    274v    276<
                 v={273:(0,-1),274:(0,1),275:(1,0),276:(-1,0)}
@@ -115,15 +114,15 @@ class WaveArray:
                     #self.selected = pygame.Vector2(self.selected[0]%self.size,self.selected[1]%self.size)
                     if self.followSelected:
                         screen.MoveCamera(pygame.Vector2(v[key]))
-                d = {100:0,115:1,97:2,119:3}
+                d = {100:0,115:1,97:2,119:3}#wasd
                 if key in d:
                     self.getWave(self.selected).ToggleDirection(d[key])
-                    self.AddUpdate(self.selected[0],self.selected[1])
-                u = {114:1,102:-1}
+                    self.AddUpdate(self.selected)
+                u = {114:1,102:-1}#r,f
                 if key in u:
                     self.getWave(self.selected).ChangeDefault(u[key])
-                    self.AddUpdate(self.selected[0],self.selected[1])
-                if key==99:
+                    self.AddUpdate(self.selected)
+                if key==99:#c
                     self.followSelected = not self.followSelected
                 if key==116:#t
                     screen.ZoomCameraAt(0.5,self.selected)
@@ -131,7 +130,7 @@ class WaveArray:
                     screen.ZoomCameraAt(2,self.selected)
                 if key==121:#y
                     self.updating=not self.updating
-                if key==104:#h
+                if key==101:#e
                     self.updatingOnce=True
                 if key==98:#b
                     self.Reset()
@@ -139,21 +138,19 @@ class WaveArray:
             self.updatingOnce=False
             self.updateList=self.newUpdateList.copy()
             self.newUpdateList.clear()
-            for x,y in self.updateList:
-                    wave = self.getWave((x,y))
-                    s = int(self.getWave((x,y)).getOutgoing())
+            for p in self.updateList:
+                    wave = self.getWave(p)
+                    s = int(self.getWave(p).getOutgoing())
 
                     wave.preUpdate()
                     for f in wave.getFacingAdded():
-                        x1=int(f[0]+x)
-                        y1=int(f[1]+y)
-                        self.getWave((x1,y1)).addIncoming(1)
-                        self.AddUpdate(x1,y1)
+                        p1=f[0]+p[0],f[1]+p[1]
+                        self.getWave(p1).addIncoming(1)
+                        self.AddUpdate(p1)
                     for f in wave.getFacingRemoved():
-                        x1=int(f[0]+x)
-                        y1=int(f[1]+y)
-                        self.getWave((x1,y1)).addIncoming(-1)
-                        self.AddUpdate(x1,y1)
+                        p1=f[0]+p[0],f[1]+p[1]
+                        self.getWave(p1).addIncoming(-1)
+                        self.AddUpdate(p1)
 
             for p in self.newUpdateList.union(self.updateList):
                 self.getWave(p).postUpdate()
@@ -190,7 +187,7 @@ class Screen:
         '''x1,y1,x2,y2'''
         x1,y1=self.cameraPos
         x2,y2=self.getSize()
-        return int(x1),int(y1),int(x2)+2,int(y2)+2
+        return int(x1),int(y1),int(x1+x2)+2,int(y1+y2)+2
     def CameraTransformPos(self,position):
         pos=position+pygame.Vector2(1,1)/2
         #v=self.getSize()/2
@@ -223,12 +220,15 @@ class Screen:
     def clearTextBuffer(self):
         self.textDrawBuffer.clear()
     def DrawWaveArray(self,waveArray):
-        vis=self.Visible()
+        vx,vy,Vx,Vy=self.Visible()
         self.canvas.lock()
-        self.DrawSelector(waveArray.selected)
-        for y in range(vis[1],vis[1]+vis[3]):
-            for x in range(vis[0],vis[0]+vis[2]):
-                self.DrawWave(waveArray.getWave((x,y),False),pygame.Vector2(x,y))
+        self.DrawSelector(waveArray.selected)   #TODO: make it so it chooses which one to use based on which one is more efficient
+        # for y in range(vy,Vy):
+        #     for x in range(vx,Vx):
+        #         self.DrawWave(waveArray.getWave((x,y),False),pygame.Vector2(x,y))
+        for p in waveArray.arrayLimitless:
+            if vx<=p[0]<=Vx and vy<=p[1]<=Vy:
+                self.DrawWave(waveArray.getWave(p,False),p)
         self.canvas.unlock()
         for d in self.textDrawBuffer:
             self.actualDrawText(d)
@@ -236,6 +236,7 @@ class Screen:
     def DrawWave(self,wave,pos):
         if not wave or wave.IsResettable():
             return
+        pos=pygame.Vector2(pos)
         posS=self.CameraTransformPos(pos)
         color=(100*min(wave.getValue(),2),50,50)
         color2=(0,100*min(wave.getDefault(),2),50*min(wave.getDefault(),5))
