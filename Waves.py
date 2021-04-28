@@ -14,9 +14,6 @@ class Wave:
         self.resettable=False
     def AddUpdate(self):
         self.updated=True
-    @staticmethod
-    def Vector(direction=4):
-        return pygame.Vector2([(1,0),(0,1),(-1,0),(0,-1),(0,0)][direction])
     def getOutgoing(self):
         return self.outgoing+self.default
     def addIncoming(self,incoming):
@@ -47,8 +44,8 @@ class Wave:
         out=[]
         if self.getOutgoing():
             for i in range(4):
-                if self.directions[i]:
-                    out.append(tuple(Wave.Vector(i)*self.getOutgoing()))
+                if self.IsDirectedTowards(i):
+                    out.append(vectorInt(directionToVector(i)*self.getOutgoing()))
         self.facing=set(out)
     def getFacing(self):
         return self.facing
@@ -62,8 +59,16 @@ class Wave:
         self.directions=[False,False,False,False]
     def IsDirected(self):
         return True in self.directions
+    def IsDirectedTowards(self,direction):
+        return self.directions[direction]
     def IsResettable(self):
         return not ((self.IsDirected()) or self.getOutgoing())
+    def RotatedDirections(self,amount):
+        a=amount%4
+        return self.directions[a:]+self.directions[:a]
+    def SetDirections(self,directions):
+        self.directions=directions
+        self.AddUpdate()
     
 class WaveArray:
     def __init__(self):
@@ -75,7 +80,7 @@ class WaveArray:
         self.updating=True
         self.updatingOnce=False
         self.arrayLimitless={}
-    def Reset(self):
+    def ResetUnused(self):
         removable=[]
         for p in self.arrayLimitless:
             if self.arrayLimitless[p].IsResettable() and not (p in self.newUpdateList):#there might be a bug here if you reset and remove a direction at the same time. Hopefully the second conditional prevents this
@@ -132,8 +137,8 @@ class WaveArray:
                     self.updating=not self.updating
                 if key==101:#e
                     self.updatingOnce=True
-                if key==98:#b
-                    self.Reset()
+                #if key==98:#b
+                self.ResetUnused()
         if self.updating or self.updatingOnce:
             self.updatingOnce=False
             self.updateList=self.newUpdateList.copy()
@@ -241,8 +246,8 @@ class Screen:
         color=(100*min(wave.getValue(),2),50,50)
         color2=(0,100*min(wave.getDefault(),2),50*min(wave.getDefault(),5))
         for i in range(4):
-            if wave.directions[i]:
-                posEnd=self.CameraTransformPos(pos+Wave.Vector(i)/2)
+            if wave.IsDirectedTowards(i):
+                posEnd=self.CameraTransformPos(pos+directionToVector(i)/2)
                 self.DrawLine(posS, posEnd, color, self.CameraTransformScale(pos, 1/6))
         if wave.IsDirected():
             self.DrawCircle(posS, color2, self.CameraTransformScale(pos,1/8))
@@ -269,6 +274,7 @@ class Screen:
             pygame.time.wait(timer)
             if pygame.event.get(pygame.QUIT):
                 run=False
+                return
             e=pygame.event.get()
             waveArray.Update(e,self)
             self.Clear()
@@ -278,6 +284,12 @@ class Screen:
 
 def vectorInt(v):
     return (int(v[0]),int(v[1]))
+def directionToVector(direction=4):
+    return pygame.Vector2([(1,0),(0,1),(-1,0),(0,-1),(0,0)][direction])
+def rotateVector(vec,amount):
+    return pygame.Vector2(vec).rotate(amount*90)
+    # x,y=vec
+    # return pygame.Vector2([(x,y),(-y,x),(-x,-y),(y,-x)][amount%4])
 
 _scale = 60
 _timer = 40
