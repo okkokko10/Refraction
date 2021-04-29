@@ -109,6 +109,7 @@ class WaveArray:
         self.arrayLimitless = {}
         self.rectSelectA = (0, 0)
         self.rectSelectB = (0, 0)
+        self.rectSelectRotation = 0
 
     def ResetUnused(self):
         removable = []
@@ -176,6 +177,11 @@ class WaveArray:
                     self.SetRectSelectA(self.selected)
                 if key == 109:  # m
                     self.SetRectSelectB(self.selected)
+                if key == 117:  # u
+                    self.RotateClone(1)
+                if key == 106:  # j
+                    self.RotateClone(-1)
+
                 self.ResetUnused()
         if self.updating or self.updatingOnce:
             self.updatingOnce = False
@@ -229,7 +235,7 @@ class WaveArray:
             a.setDefault(out[v][1])
             self.AddUpdate(v)
 
-    def CloneRect(self, pos1, pos2, posTo):
+    def CloneRect(self, pos1, pos2, posTo, rotation):
         changes = []
         if pos1[0] > pos2[0]:
             sx = -1
@@ -243,14 +249,19 @@ class WaveArray:
         for y in range(abs(pos2[1]-pos1[1])+1):
             for x in range(abs(pos2[0]-pos1[0])+1):
                 f = (pos1[0]+sx*x, pos1[1]+sy*y)
-                t = (posTo[0]+sx*x, posTo[1]+sy*y)
+                t = vectorInt(pygame.Vector2(
+                    posTo)+rotateVector(pygame.Vector2(sx*x, sy*y), rotation))
+                #t = (posTo[0]+sx*x, posTo[1]+sy*y)
                 changes.append((f, t))
-        self.CloneGroup(changes, 0)
-        pass
+        self.CloneGroup(changes, rotation)
 
     def CloneSelected(self):
         self.CloneRect(self.getRectSelectA(),
-                       self.getRectSelectB(), self.selected)
+                       self.getRectSelectB(), self.selected, self.rectSelectRotation)
+
+    def RotateClone(self, amount):
+        self.rectSelectRotation += amount
+        self.rectSelectRotation %= 4
 
 
 class Screen:
@@ -368,12 +379,19 @@ class Screen:
         self.DrawCircle(posS, color, self.CameraTransformScale(pos, 1/4))
 
     def DrawRectSelect(self, waveArray):
-        color = (150, 150, 150)
         vecA = self.CameraTransformPos(waveArray.getRectSelectA())
         vecB = self.CameraTransformPos(waveArray.getRectSelectB())
         rect = vectorToRect(vecA, vecB)
+        vecC = self.CameraTransformPos(pygame.Vector2(waveArray.selected))
+        vecD = self.CameraTransformPos(pygame.Vector2(waveArray.selected)+rotateVector(pygame.Vector2(
+            waveArray.getRectSelectB())-pygame.Vector2(waveArray.getRectSelectA()), waveArray.rectSelectRotation))
+        rect2 = vectorToRect(vecC, vecD)
+        color = (150, 150, 150)
         pygame.draw.rect(self.canvas, color, rect)
-        pass
+        color2 = (170, 170, 170)
+        pygame.draw.rect(self.canvas, color2, rect2)
+        self.DrawCircle(self.CameraTransformPos(waveArray.getRectSelectA(
+        )), color, self.CameraTransformScale(waveArray.getRectSelectA(), 1/4))
 
     def Clear(self):
         self.canvas.fill((100, 100, 100))
