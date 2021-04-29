@@ -127,29 +127,18 @@ class WaveArray:
 
     def Update(self, events, screen):
         for e in events:
-            # if e.type == pygame.MOUSEBUTTONDOWN:
-            #     print(e)
-            #     pos=e.__dict__['pos']
-            #     pos= pos[0]//screen.scale,pos[1]//screen.scale
-            #     button=e.__dict__['button']
-            #     wave=self.array[pos[0],pos[1]]
-            #     if button==1:
-            #         wave.Rotate(1)
-            #     elif button==3:
-            #         wave.Rotate(-1)
-            #     elif button==4:#up
-            #         wave.ChangeDefault(1)
-            #     elif button==5:#down
-            #         wave.ChangeDefault(-1)
-            #     elif button==6:#disable
-            #         wave.turnUp()
+            if e.type == pygame.MOUSEMOTION:
+                pos = e.__dict__['pos']
+                posS = screen.InverseTransformPos(pos)
+                self.SetSelected(vectorInt(posS))
+
             if e.type == pygame.KEYDOWN:
                 # print(e)
                 key = e.__dict__['key']
                 #   273^    275>    274v    276<
                 v = {273: (0, -1), 274: (0, 1), 275: (1, 0), 276: (-1, 0)}
                 if key in v:
-                    self.selected += pygame.Vector2(v[key])
+                    self.MoveSelected(pygame.Vector2(v[key]))
                     #self.selected = pygame.Vector2(self.selected[0]%self.size,self.selected[1]%self.size)
                     if self.followSelected:
                         screen.MoveCamera(pygame.Vector2(v[key]))
@@ -263,6 +252,15 @@ class WaveArray:
         self.rectSelectRotation += amount
         self.rectSelectRotation %= 4
 
+    def SetSelected(self, value):
+        self.selected = value
+
+    def GetSelected(self):
+        return self.selected
+
+    def MoveSelected(self, value):
+        self.selected += pygame.Vector2(value)
+
 
 class Screen:
     def __init__(self, scale, size):
@@ -303,6 +301,11 @@ class Screen:
         a = (pos-self.cameraPos)
         c = a*self.scale
         return c
+
+    def InverseTransformPos(self, pos):
+        a = pygame.Vector2(pos)/self.scale
+        b = self.cameraPos+a
+        return b
 
     def CameraTransformScale(self, position, scale):
         # pos=position+pygame.Vector2(1,1)/2
@@ -422,7 +425,7 @@ class Screen:
 
 
 def vectorInt(v):
-    return (int(v[0]), int(v[1]))
+    return (round(v[0]), round(v[1]))
 
 
 def directionToVector(direction=4):
@@ -430,7 +433,7 @@ def directionToVector(direction=4):
 
 
 def rotateVector(vec, amount):
-    return pygame.Vector2(vec).rotate(amount*90)
+    return pygame.Vector2(vec).rotate(-amount*90)
     # x,y=vec
     # return pygame.Vector2([(x,y),(-y,x),(-x,-y),(y,-x)][amount%4])
 
