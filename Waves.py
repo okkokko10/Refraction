@@ -37,6 +37,8 @@ class Wave:
         self.default=max(self.default+amount,0)
     def getDefault(self):
         return self.default
+    def setDefault(self,value):
+        self.default=value
     def getOld(self):
         return self.old
     def updateFacing(self):
@@ -80,6 +82,9 @@ class WaveArray:
         self.updating=True
         self.updatingOnce=False
         self.arrayLimitless={}
+        self.rectSelectA=(0,0)
+        self.rectSelectB=(0,0)
+
     def ResetUnused(self):
         removable=[]
         for p in self.arrayLimitless:
@@ -137,7 +142,12 @@ class WaveArray:
                     self.updating=not self.updating
                 if key==101:#e
                     self.updatingOnce=True
-                #if key==98:#b
+                if key==98:#b
+                    self.CloneSelected()
+                if key==110:#n
+                    self.SetRectSelectA(self.selected)
+                if key==109:#m
+                    self.SetRectSelectB(self.selected)
                 self.ResetUnused()
         if self.updating or self.updatingOnce:
             self.updatingOnce=False
@@ -165,7 +175,46 @@ class WaveArray:
         else:
             if vectorInt(pos) in self.arrayLimitless:
                 return self.arrayLimitless[vectorInt(pos)]
+    def SetRectSelectA(self,pos):
+        self.rectSelectA=vectorInt(pos)
+    def SetRectSelectB(self,pos):
+        self.rectSelectB=vectorInt(pos)
+    def getRectSelectA(self):
+        return self.rectSelectA
+    def getRectSelectB(self):
+        return self.rectSelectB
+    def CloneGroup(self,positions,rotation):
+        #positions: list of tuples that have from in index 0 and to in index 1
+        out={}
+        for m in positions:
+            a=self.getWave(m[0])
+            out[m[1]]=a.RotatedDirections(rotation),a.getDefault()
+        for v in out:
+            a=self.getWave(v)
+            a.SetDirections(out[v][0])
+            a.setDefault(out[v][1])
+            self.AddUpdate(v)
 
+    def CloneRect(self,pos1,pos2,posTo):
+        changes=[]
+        if pos1[0]>pos2[0]:
+            sx=-1
+        else:
+            sx=1
+        if pos1[1]>pos2[1]:
+            sy=-1
+        else:
+            sy=1
+
+        for y in range(abs(pos2[1]-pos1[1])+1):
+            for x in range(abs(pos2[0]-pos1[0])+1):
+                f=(pos1[0]+sx*x,pos1[1]+sy*y)
+                t=(posTo[0]+sx*x,posTo[1]+sy*y)
+                changes.append((f,t))
+        self.CloneGroup(changes, 0)
+        pass
+    def CloneSelected(self):
+        self.CloneRect(self.getRectSelectA(), self.getRectSelectB(), self.selected)
 
     
 class Screen:
@@ -177,7 +226,7 @@ class Screen:
         self.textDrawBuffer=[]
         self.textMemory={}
         self.textColor=(0,100,200)
-        self.cameraPos=pygame.Vector2(0,0)
+        self.cameraPos=-pygame.Vector2(1,1)/2
         self.Resize()
         self.drawSettings={'text':True,'knobs':True,'unpoweredKnobs':True}
     def DrawText(self,pos,text,color):
@@ -194,13 +243,13 @@ class Screen:
         x2,y2=self.getSize()
         return int(x1),int(y1),int(x1+x2)+2,int(y1+y2)+2
     def CameraTransformPos(self,position):
-        pos=position+pygame.Vector2(1,1)/2
+        pos=position#+pygame.Vector2(1,1)/2
         #v=self.getSize()/2
         a=(pos-self.cameraPos)
         c=a*self.scale
         return c
     def CameraTransformScale(self,position,scale):
-        pos=position+pygame.Vector2(1,1)/2
+        #pos=position+pygame.Vector2(1,1)/2
         #v=self.getSize()/2
         #a=(pos-self.cameraPos)
         #l = (a-v).magnitude()
@@ -208,7 +257,7 @@ class Screen:
     def MoveCamera(self,direction):
         self.cameraPos+=direction
     def ZoomCameraAt(self,amount,position):
-        pos = position+pygame.Vector2(1,1)/2
+        pos = position#+pygame.Vector2(1,1)/2
         self.scale*=amount
         self.cameraPos = pos + (self.cameraPos-pos)/amount
         self.Resize()
@@ -227,6 +276,7 @@ class Screen:
     def DrawWaveArray(self,waveArray):
         vx,vy,Vx,Vy=self.Visible()
         self.canvas.lock()
+        self.DrawRectSelect(waveArray)
         self.DrawSelector(waveArray.selected)   #TODO: make it so it chooses which one to use based on which one is more efficient
         # for y in range(vy,Vy):
         #     for x in range(vx,Vx):
@@ -258,6 +308,13 @@ class Screen:
         posS=self.CameraTransformPos(pos)
         color=(200,200,200)
         self.DrawCircle(posS, color, self.CameraTransformScale(pos, 1/4))
+    def DrawRectSelect(self,waveArray):
+        color=(150,150,150)
+        vecA=self.CameraTransformPos( waveArray.getRectSelectA() )
+        vecB=self.CameraTransformPos( waveArray.getRectSelectB() )
+        rect = vectorToRect(vecA, vecB)
+        pygame.draw.rect(self.canvas,color,rect)
+        pass
     def Clear(self):
         self.canvas.fill((100,100,100))
     def ChangeSettings(self,setting,value):
@@ -290,6 +347,9 @@ def rotateVector(vec,amount):
     return pygame.Vector2(vec).rotate(amount*90)
     # x,y=vec
     # return pygame.Vector2([(x,y),(-y,x),(-x,-y),(y,-x)][amount%4])
+def vectorToRect(vecA,vecB):
+    return pygame.Rect(min(vecA[0],vecB[0]),min(vecA[1],vecB[1]),abs(vecA[0]-vecB[0]),abs(vecA[1]-vecB[1]))
+    
 
 _scale = 60
 _timer = 40
