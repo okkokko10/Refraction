@@ -1,6 +1,6 @@
 import pygame
 import pickle
-
+pygame.font.init()
 
 class Wave:
     def __init__(self, default=0):
@@ -107,6 +107,7 @@ class WaveArray:
         self.rectSelectA = (0, 0)
         self.rectSelectB = (0, 0)
         self.rectSelectRotation = 0
+        self.console = CommandConsole()
 
     def ResetUnused(self):
         removable = []
@@ -132,6 +133,9 @@ class WaveArray:
                 self.SetSelected(vectorInt(posS))
 
             if e.type == pygame.KEYDOWN:
+                self.console.KeydownEvent(e)
+                if self.console.IsLocking():
+                    return
                 # print(e)
                 key = e.__dict__['key']
                 #   273^    275>    274v    276<
@@ -303,7 +307,6 @@ class Screen:
     def __init__(self, scale, size):
         self.canvas = pygame.display.set_mode(size)
         self.scale = scale
-        pygame.font.init()
         self.font = pygame.font.Font(None, self.scale)
         self.textDrawBuffer = []
         self.textMemory = {}
@@ -393,6 +396,7 @@ class Screen:
         for d in self.textDrawBuffer:
             self.actualDrawText(d)
         self.clearTextBuffer()
+        waveArray.console.BlitTo(self.canvas)
 
     def DrawWave(self, wave, pos):
         if not wave or wave.IsResettable():
@@ -467,6 +471,46 @@ class Screen:
             self.DrawWaveArray(waveArray)
             pygame.display.update()
 
+class CommandConsole:
+    def __init__(self):
+        self.text=['']
+        self.opened=False
+        self.height = 50
+        self.font = pygame.font.Font(None,self.height)
+    def KeydownEvent(self,event):
+        key = event.__dict__['key']
+        if self.opened:
+            self.Write(event)
+        if key == 13:
+            if self.opened:
+                self.opened = False
+                self.Close()
+            else:
+                self.opened = True
+                self.Open()
+    def IsLocking(self):
+        return self.opened
+    def Write(self,event):
+        letter=event.__dict__['unicode']
+        self.text[-1]+=letter
+        pass
+    def Open(self):
+        return
+    def Close(self):
+        self.text.append('')
+        return
+    def Surface(self):
+        surf = pygame.Surface((600,self.height*(len(self.text))))
+        surf.set_alpha(100)
+        out=[]
+        color = (0,0,200)
+        for i in range(len(self.text)):
+            out.append((self.font.render(self.text[i], False, color),(0,i*self.height)))
+        surf.blits(out)
+        return surf
+    def BlitTo(self,destination):
+        destination.blit(self.Surface(),(0,0))
+            
 
 def vectorInt(v):
     return (round(v[0]), round(v[1]))
