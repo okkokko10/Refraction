@@ -1,21 +1,18 @@
-import numpy as np
 import pygame
+import pickle
 
 
 class Wave:
     def __init__(self, default=0):
         self.directions = [False, False, False, False]
         self.incoming = 0
-        self.value = 0
         self.outgoing = 0
         self.oldFacing = set()
         self.facing = set()
         self.default = default
-        self.updated = True
-        self.resettable = False
 
     def AddUpdate(self):
-        self.updated = True
+        pass
 
     def getOutgoing(self):
         return self.outgoing+self.default
@@ -25,34 +22,21 @@ class Wave:
 
     def preUpdate(self):
         self.updateFacing()
-        pass
 
     def postUpdate(self):
         self.outgoing = self.incoming
-        # self.incoming=self.default
-        self.value = self.getOutgoing()
-        self.updated = False
-        pass
-
-    def getValue(self):
-        return max(0, self.value)
 
     def ToggleDirection(self, direction):
         self.directions[direction] = not self.directions[direction]
 
     def ChangeDefault(self, amount):
-        self.AddUpdate()
-        # self.incoming+=amount
         self.default = max(self.default+amount, 0)
 
     def getDefault(self):
         return self.default
 
-    def setDefault(self, value):
+    def SetDefault(self, value):
         self.default = value
-
-    def getOld(self):
-        return self.old
 
     def updateFacing(self):
         self.oldFacing = self.facing
@@ -64,11 +48,11 @@ class Wave:
                         vectorInt(directionToVector(i)*self.getOutgoing()))
         self.facing = set(out)
 
-    def getFacing(self):
-        return self.facing
+    # def getFacing(self):
+    #     return self.facing
 
-    def getFacingOld(self):
-        return self.oldFacing
+    # def getFacingOld(self):
+    #     return self.oldFacing
 
     def getFacingAdded(self):
         return self.facing.difference(self.oldFacing)
@@ -76,8 +60,8 @@ class Wave:
     def getFacingRemoved(self):
         return self.oldFacing.difference(self.facing)
 
-    def turnUp(self):
-        self.directions = [False, False, False, False]
+    # def turnUp(self):
+    #     self.directions = [False, False, False, False]
 
     def IsDirected(self):
         return True in self.directions
@@ -94,7 +78,20 @@ class Wave:
 
     def SetDirections(self, directions):
         self.directions = directions
-        self.AddUpdate()
+
+    def Save(self):
+        return self.directions, self.default, self.incoming
+
+    def Load(self, saveState):
+        self.directions, self.default, self.incoming = saveState
+        self.postUpdate()
+        self.preUpdate()
+
+    @staticmethod
+    def Loaded(saveState):
+        wave = Wave()
+        wave.Load(saveState)
+        return wave
 
 
 class WaveArray:
@@ -121,11 +118,13 @@ class WaveArray:
             del self.arrayLimitless[p]
 
     def AddUpdate(self, p):
-
         self.newUpdateList.add(vectorInt(p))
-        self.getWave(vectorInt(p)).AddUpdate()
 
     def Update(self, events, screen):
+        self.UpdateInputs(events, screen)
+        self.UpdateState()
+
+    def UpdateInputs(self, events, screen):
         for e in events:
             if e.type == pygame.MOUSEMOTION:
                 pos = e.__dict__['pos']
@@ -172,14 +171,14 @@ class WaveArray:
                     self.RotateClone(-1)
 
                 self.ResetUnused()
+
+    def UpdateState(self):
         if self.updating or self.updatingOnce:
             self.updatingOnce = False
             self.updateList = self.newUpdateList.copy()
             self.newUpdateList.clear()
             for p in self.updateList:
                 wave = self.getWave(p)
-                s = int(self.getWave(p).getOutgoing())
-
                 wave.preUpdate()
                 for f in wave.getFacingAdded():
                     p1 = f[0]+p[0], f[1]+p[1]
@@ -221,7 +220,7 @@ class WaveArray:
         for v in out:
             a = self.getWave(v)
             a.SetDirections(out[v][0])
-            a.setDefault(out[v][1])
+            a.SetDefault(out[v][1])
             self.AddUpdate(v)
 
     def CloneRect(self, pos1, pos2, posTo, rotation):
@@ -260,6 +259,36 @@ class WaveArray:
 
     def MoveSelected(self, value):
         self.selected += pygame.Vector2(value)
+
+    def Save(self):
+        out = {}
+        for p in self.arrayLimitless:
+            out[p] = self.arrayLimitless[p].Save()
+        return out  # ,self.newUpdateList.union(self.updateList)
+
+    def Load(self, saveState):
+        for p in saveState:
+            self.arrayLimitless[p] = Wave.Loaded(saveState[p])
+        self.ReloadAll()
+
+    def ReloadAll(self):
+        self.newUpdateList = set(self.arrayLimitless.keys())
+
+    @staticmethod
+    def Loaded(saveState):
+        waveArray = WaveArray()
+        waveArray.Load(saveState)
+        return waveArray
+
+    def OnQuit(self):
+        pass
+
+    def SaveTo(self, filename):
+        ToFile(filename, self.Save())
+    @staticmethod
+    def LoadedFrom(filename):
+        return WaveArray.Loaded(FromFile(filename))
+        
 
 
 class Screen:
@@ -362,7 +391,7 @@ class Screen:
             return
         pos = pygame.Vector2(pos)
         posS = self.CameraTransformPos(pos)
-        color = (100*min(wave.getValue(), 2), 50, 50)
+        color = (100*min(wave.getOutgoing(), 2), 50, 50)
         color2 = (0, 100*min(wave.getDefault(), 2),
                   50*min(wave.getDefault(), 5))
         for i in range(4):
@@ -416,6 +445,7 @@ class Screen:
             pygame.time.wait(timer)
             if pygame.event.get(pygame.QUIT):
                 run = False
+                waveArray.OnQuit()
                 return
             e = pygame.event.get()
             waveArray.Update(e, self)
@@ -442,11 +472,22 @@ def vectorToRect(vecA, vecB):
     return pygame.Rect(min(vecA[0], vecB[0]), min(vecA[1], vecB[1]), abs(vecA[0]-vecB[0]), abs(vecA[1]-vecB[1]))
 
 
+def ToFile(filename, data):
+    f = open(filename, 'wb')
+    pickle.dump(data, f)
+    f.close()
+def FromFile(filename):
+    f = open(filename,'rb')
+    out = pickle.load(f)
+    f.close()
+    return out
+
 _scale = 60
 _timer = 40
-_scrSize = 800, 700
-a = WaveArray()
+_scrSize = 1000, 700
+a = WaveArray.LoadedFrom('Wavefile.obj')
 S = Screen(_scale, _scrSize)
 #S.ChangeSettings('text', False)
 #S.ChangeSettings('unpoweredKnobs', False)
 S.Loop(a, _timer)
+a.SaveTo('Wavefile.obj')
