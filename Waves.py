@@ -285,10 +285,18 @@ class WaveArray:
 
     def SaveTo(self, filename):
         ToFile(filename, self.Save())
+
     @staticmethod
     def LoadedFrom(filename):
         return WaveArray.Loaded(FromFile(filename))
-        
+
+    def GetRotatedRectSelectEnd(self):
+
+        return pygame.Vector2(self.selected)
+        +rotateVector(
+            pygame.Vector2(self.getRectSelectB()) -
+            pygame.Vector2(self.getRectSelectA()),
+            self.rectSelectRotation)
 
 
 class Screen:
@@ -390,40 +398,38 @@ class Screen:
         if not wave or wave.IsResettable():
             return
         pos = pygame.Vector2(pos)
-        posS = self.CameraTransformPos(pos)
         color = (100*min(wave.getOutgoing(), 2), 50, 50)
         color2 = (0, 100*min(wave.getDefault(), 2),
                   50*min(wave.getDefault(), 5))
         for i in range(4):
             if wave.IsDirectedTowards(i):
-                posEnd = self.CameraTransformPos(pos+directionToVector(i)/2)
-                self.DrawLine(posS, posEnd, color,
-                              self.CameraTransformScale(pos, 1/6))
+                posEnd = pos+directionToVector(i)/2
+                self.tDrawLine(pos, posEnd, color, 1/6)
         if wave.IsDirected():
-            self.DrawCircle(posS, color2, self.CameraTransformScale(pos, 1/8))
+            self.tDrawCircle(pos, color2, 1/8)
         if wave.getOutgoing() and self.drawSettings['text']:
             color3 = color[1], color[2], color[0]
             self.DrawText(pos, str(wave.getOutgoing()), color3)
 
     def DrawSelector(self, pos):
-        posS = self.CameraTransformPos(pos)
         color = (200, 200, 200)
-        self.DrawCircle(posS, color, self.CameraTransformScale(pos, 1/4))
+        self.tDrawCircle(pos, color, 1/4)
 
     def DrawRectSelect(self, waveArray):
-        vecA = self.CameraTransformPos(waveArray.getRectSelectA())
-        vecB = self.CameraTransformPos(waveArray.getRectSelectB())
-        rect = vectorToRect(vecA, vecB)
-        vecC = self.CameraTransformPos(pygame.Vector2(waveArray.selected))
-        vecD = self.CameraTransformPos(pygame.Vector2(waveArray.selected)+rotateVector(pygame.Vector2(
-            waveArray.getRectSelectB())-pygame.Vector2(waveArray.getRectSelectA()), waveArray.rectSelectRotation))
-        rect2 = vectorToRect(vecC, vecD)
+
         color = (150, 150, 150)
-        pygame.draw.rect(self.canvas, color, rect)
+        self.tDrawRect(waveArray.getRectSelectA(),
+                       waveArray.getRectSelectB(), color)
         color2 = (170, 170, 170)
-        pygame.draw.rect(self.canvas, color2, rect2)
-        self.DrawCircle(self.CameraTransformPos(waveArray.getRectSelectA(
-        )), color, self.CameraTransformScale(waveArray.getRectSelectA(), 1/4))
+        self.tDrawRect(waveArray.GetSelected(),
+                       waveArray.GetRotatedRectSelectEnd(), color2)
+        self.tDrawCircle(waveArray.getRectSelectA(), color, 1/4)
+
+    def tDrawRect(self, vectorA, vectorB, color):
+        vecA = self.CameraTransformPos(vectorA)
+        vecB = self.CameraTransformPos(vectorB)
+        rect = vectorToRect(vecA, vecB)
+        pygame.draw.rect(self.canvas, color, rect)
 
     def Clear(self):
         self.canvas.fill((100, 100, 100))
@@ -438,6 +444,14 @@ class Screen:
 
     def DrawCircle(self, pos, color, radius):
         pygame.draw.circle(self.canvas, color, vectorInt(pos), int(radius))
+
+    def tDrawLine(self, A, B, color, width):
+        self.DrawLine(self.CameraTransformPos(A), self.CameraTransformPos(
+            B), color, self.CameraTransformScale(A, width))
+
+    def tDrawCircle(self, pos, color, radius):
+        self.DrawCircle(self.CameraTransformPos(pos), color,
+                        self.CameraTransformScale(pos, radius))
 
     def Loop(self, waveArray, timer=200):
         run = True
@@ -476,11 +490,14 @@ def ToFile(filename, data):
     f = open(filename, 'wb')
     pickle.dump(data, f)
     f.close()
+
+
 def FromFile(filename):
-    f = open(filename,'rb')
+    f = open(filename, 'rb')
     out = pickle.load(f)
     f.close()
     return out
+
 
 _scale = 60
 _timer = 40
