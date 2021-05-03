@@ -402,7 +402,7 @@ class Screen:
         if not wave or wave.IsResettable():
             return
         pos = pygame.Vector2(pos)
-        color = (100*min(wave.getOutgoing(), 2), 50, 50)
+        color = (100*max(min(wave.getOutgoing(), 2),0), 50, 50)
         color2 = (0, 100*min(wave.getDefault(), 2),
                   50*min(wave.getDefault(), 5))
         for i in range(4):
@@ -477,10 +477,9 @@ class CommandConsole:
         self.opened=False
         self.height = 50
         self.font = pygame.font.Font(None,self.height)
+        self.RefreshSurface()
     def KeydownEvent(self,event):
         key = event.__dict__['key']
-        if self.opened:
-            self.Write(event)
         if key == 13:
             if self.opened:
                 self.opened = False
@@ -488,18 +487,27 @@ class CommandConsole:
             else:
                 self.opened = True
                 self.Open()
+        elif self.opened:
+            self.Write(event)
+        self.RefreshSurface()
     def IsLocking(self):
         return self.opened
     def Write(self,event):
+        print(event)
         letter=event.__dict__['unicode']
-        self.text[-1]+=letter
-        pass
+        key=event.__dict__['key']
+        if key == 8:
+            if len(self.text[-1])>0:
+                self.text[-1]=self.text[-1][0:-1]
+            return
+        if letter:
+            self.text[-1]+=letter
     def Open(self):
-        return
-    def Close(self):
         self.text.append('')
         return
-    def Surface(self):
+    def Close(self):
+        return
+    def RefreshSurface(self):
         surf = pygame.Surface((600,self.height*(len(self.text))))
         surf.set_alpha(100)
         out=[]
@@ -507,9 +515,9 @@ class CommandConsole:
         for i in range(len(self.text)):
             out.append((self.font.render(self.text[i], False, color),(0,i*self.height)))
         surf.blits(out)
-        return surf
+        self.surface=surf
     def BlitTo(self,destination):
-        destination.blit(self.Surface(),(0,0))
+        destination.blit(self.surface,(0,0))
             
 
 def vectorInt(v):
