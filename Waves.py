@@ -110,7 +110,7 @@ class WaveArray:
         self.rectSelectA = (0, 0)
         self.rectSelectB = (0, 0)
         self.rectSelectRotation = 0
-        self.console = CommandConsole()
+        self.console = CommandConsoleVisual()
 
     def ResetUnused(self):
         removable = []
@@ -480,52 +480,128 @@ class Screen:
 class CommandConsole:
     def __init__(self):
         self.text=['']
-        self.opened=False
+        self.selectedLine=0
+        self.selectedIndex=0
+
+    def InsertLine(self,index,element):
+        self.text.insert(index, element)
+    def PopLine(self,index):
+        self.text.pop(index)
+    def InsertString(self,line,index,element):
+        self.text[line] = self.text[line][:index]+element+self.text[line][index:]
+    def PopString(self,line,indexFrom,indexTo):
+        self.text[line] = self.text[line][:indexFrom]+self.text[line][indexTo+1:]
+    def Parse(self):
+        self.text[-1]
+    def TypeText(self,element):
+        self.InsertString(self.selectedLine, self.selectedIndex, element)
+        self.MoveRight()
+    def Backspace(self):
+        self.PopString(self.selectedLine, self.selectedIndex, self.selectedIndex)
+    def Enter(self):
+        self.InsertLine(self.selectedLine+1, '')
+        self.MoveDown()
+    def MoveTo(self,line,index):
+        self.selectedIndex=index
+        self.selectedLine=line
+        self.WarpSelector()
+    def MoveUp(self):
+        self.selectedLine-=1
+        self.ClampSelector()
+    def MoveDown(self):
+        self.selectedLine+=1
+        self.ClampSelector()
+    def MoveLeft(self):
+        self.selectedIndex-=1
+        self.WarpSelector()
+    def MoveRight(self):
+        self.selectedIndex+=1
+        self.WarpSelector()
+    def GetLine(self,line):
+        if self.selectedLine==line:
+            return self.text[line][:self.selectedIndex]+'|'+self.text[line][self.selectedIndex:]
+        else: 
+            return self.text[line]
+
+    def WarpSelector(self):
+        self.selectedLine %= len(self.text)
+        if self.selectedIndex > len(self.text[self.selectedLine]):
+            self.selectedIndex = 0
+            self.selectedLine += 1
+            self.selectedLine %= len(self.text)
+        elif self.selectedIndex < 0:
+            self.selectedLine -= 1
+            self.selectedLine %= len(self.text)
+            self.selectedIndex = len(self.text[self.selectedLine])
+        self.selectedLine %= len(self.text)
+    def ClampSelector(self):
+        if self.selectedLine>=len(self.text):
+            self.selectedLine = len(self.text)-1
+        elif self.selectedLine<=0:
+            self.selectedLine=0
+        if self.selectedIndex > len(self.text[self.selectedLine]):
+            self.selectedIndex = len(self.text[self.selectedLine])
+        elif self.selectedIndex<0:
+            self.selectedIndex=0
+        
+
+class CommandConsoleVisual:
+    def __init__(self):
+        self.console = CommandConsole()
         self.height = 50
         self.font = pygame.font.Font(None,self.height)
+        self.opened=True
         self.RefreshSurface()
+    def RefreshSurface(self):
+        self.surface = pygame.Surface((600,self.height*(len(self.console.text))))
+        self.surface.set_alpha(100)
+        out=[]
+        color = (0,0,200)
+        for i in range(len(self.console.text)):
+            out.append((self.font.render(self.console.GetLine(i), False, color),(0,i*self.height)))
+        self.surface.blits(out)
+        
+    def BlitTo(self,destination):
+        destination.blit(self.surface,(0,0))
+
     def KeydownEvent(self,event):
         key = event.__dict__['key']
+                #   273^    275>    274v    276<
         if key == 13:
             if self.opened:
-                self.opened = False
                 self.Close()
             else:
-                self.opened = True
                 self.Open()
         elif self.opened:
             self.Write(event)
         self.RefreshSurface()
+
+    def Open(self):
+        self.opened = True
+        self.console.Enter()
+        return
+
+    def Close(self):
+        self.opened = False
+        return
+
     def IsLocking(self):
         return self.opened
+    
     def Write(self,event):
-        print(event)
+        #print(event)
         letter=event.__dict__['unicode']
         key=event.__dict__['key']
         if key == 8:
-            if len(self.text[-1])>0:
-                self.text[-1]=self.text[-1][0:-1]
+            self.console.Backspace()
             return
+        a={273:self.console.MoveUp,275:self.console.MoveRight,274:self.console.MoveDown,276:self.console.MoveLeft}
+        if key in a:
+            a[key]()
         if letter:
-            self.text[-1]+=letter
-    def Open(self):
-        self.text.append('')
-        return
-    def Close(self):
-        return
-    def RefreshSurface(self):
-        surf = pygame.Surface((600,self.height*(len(self.text))))
-        surf.set_alpha(100)
-        out=[]
-        color = (0,0,200)
-        for i in range(len(self.text)):
-            out.append((self.font.render(self.text[i], False, color),(0,i*self.height)))
-        surf.blits(out)
-        self.surface=surf
-    def BlitTo(self,destination):
-        destination.blit(self.surface,(0,0))
-            
-
+            self.console.TypeText(letter)
+            #self.text[-1]+=letter
+        
 def vectorInt(v):
     return (round(v[0]), round(v[1]))
 
