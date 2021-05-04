@@ -80,15 +80,18 @@ class Wave:
         self.directions = directions
 
     def Save(self):
+        return self
         return self.directions, self.default, self.incoming
 
     def Load(self, saveState):
-        self.directions, self.default, self.incoming = saveState
-        self.postUpdate()
+        self.directions, self.default, self.outgoing = saveState
+        #self.postUpdate()
         self.preUpdate()
 
     @staticmethod
     def Loaded(saveState):
+        if True:
+            return saveState
         wave = Wave()
         wave.Load(saveState)
         return wave
@@ -268,12 +271,15 @@ class WaveArray:
         out = {}
         for p in self.arrayLimitless:
             out[p] = self.arrayLimitless[p].Save()
-        return out  # ,self.newUpdateList.union(self.updateList)
+        return out, self.newUpdateList.union(self.updateList)
 
     def Load(self, saveState):
-        for p in saveState:
-            self.arrayLimitless[p] = Wave.Loaded(saveState[p])
-        self.ReloadAll()
+        for p in saveState[0]:
+            self.arrayLimitless[p] = Wave.Loaded(saveState[0][p])
+        self.newUpdateList = saveState[1]
+        #self.ReloadAll()
+        #self.arrayLimitless.clear()
+        #self.newUpdateList.clear()
 
     def ReloadAll(self):
         self.newUpdateList = set(self.arrayLimitless.keys())
@@ -555,6 +561,7 @@ _scale = 60
 _timer = 40
 _scrSize = 1000, 700
 a = WaveArray.LoadedFrom('Wavefile.obj')
+#a = WaveArray()
 S = Screen(_scale, _scrSize)
 #S.ChangeSettings('text', False)
 #S.ChangeSettings('unpoweredKnobs', False)
