@@ -4,6 +4,7 @@ class CommandConsole:
         self.text = ['']
         self.selectedLine = 0
         self.selectedIndex = 0
+        self.commandBuffer=[]
         if commands:
             self.commands=commands
         else:
@@ -100,17 +101,25 @@ class CommandConsole:
         elif self.selectedIndex < 0:
             self.selectedIndex = 0
 
-    def Parse(self):
-        return self.ParseLine(self.selectedLine)
-    def ParseLine(self,line):
+    def Parse(self,store=True):
+        return self.ParseLine(self.selectedLine,store)
+    def ParseLine(self,line,store=True):
         text = self.text[line]
         if len(text)==0:# or text[0]!='/':
             return False
         words = text.split()
-        print(words)
+        #print(words)
         if words[0] in self.commands:
             if words[1].isnumeric():
-                return words[0],int(words[1])
+                out = words[0],int(words[1])
+                if store:
+                    self.commandBuffer.append(out)
+                return out
+    
+    def TakeCommandBuffer(self):
+        a = self.commandBuffer.copy()
+        self.commandBuffer.clear()
+        return a
 
 import pygame
 class CommandConsoleVisual:
@@ -119,7 +128,6 @@ class CommandConsoleVisual:
         self.height = 50
         self.font = pygame.font.Font(None, self.height)
         self.opened = True
-        self.commandBuffer=[]
         self.RefreshSurface()
 
     def RefreshSurface(self):
@@ -170,9 +178,7 @@ class CommandConsoleVisual:
             return
         if key == 13:
             if mod&1:
-                a=self.console.Parse()
-                if a:
-                    self.commandBuffer.append(a)
+                a=self.console.Parse(True)
             else:
                 self.console.Enter()
             return
@@ -184,6 +190,49 @@ class CommandConsoleVisual:
             self.console.TypeText(letter)
             # self.text[-1]+=letter
     def TakeCommandBuffer(self):
-        a = self.commandBuffer.copy()
-        self.commandBuffer.clear()
-        return a
+        return self.console.TakeCommandBuffer()
+
+class CommandArgument:
+    INT,BOOL,STR,VEC=range(4)
+    @staticmethod
+    def AsType(argumentType,argument):
+        ca=CommandArgument
+        return (ca.AsInt,ca.AsBool,ca.AsStr,ca.AsVec)[argumentType]
+        pass
+    @staticmethod
+    def AsInt(argument:str):
+        try: return int(argument)
+        except: return
+    @staticmethod
+    def AsBool(argument:str):
+        if argument in ('true','1'): return True
+        elif argument in ('false','0'): return False
+        else: return 
+    @staticmethod
+    def AsStr(argument:str):
+        return argument
+    @staticmethod
+    def AsVec(argument:str):
+        a=argument.split(',')
+        if len(a)==2:
+            try: return int(a[0]),int(a[1])
+            except: return
+        else: return
+    @staticmethod
+    def Parse(command:str,options):
+        arguments = split(command)
+        path=options
+        i=0
+        while arguments[i] in path:
+            pass
+        return
+ca=CommandArgument
+a={
+    'setspeed':('frequency',ca.INT),
+    'setwave':(('position',ca.VEC),('direction',ca.INT),('on/off',ca.BOOL)),
+    'preset':{
+        'copy':(('from',ca.VEC),('to',ca.VEC),('name',ca.STR)),
+        'paste':(('at',ca.VEC),('rotated',ca.INT),('name',ca.STR))
+        },
+    }
+    
