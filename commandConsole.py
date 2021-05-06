@@ -193,12 +193,28 @@ class CommandConsoleVisual:
         return self.console.TakeCommandBuffer()
 
 class CommandArgument:
-    INT,BOOL,STR,VEC=range(4)
+    #INT,BOOL,STR,VEC,OPT=range(5)
+    def __init__(self,argType,name):
+        self.argType=argType
+    @staticmethod
+    def INT(name):
+        return CommandArgument(0,name)
+    @staticmethod
+    def BOOL(name):
+        return CommandArgument(1,name)
+    @staticmethod
+    def STR(name):
+        return CommandArgument(2, name)
+    @staticmethod
+    def VEC(name):
+        return CommandArgument(3, name)
+    @staticmethod
+    def OPT(name):
+        return CommandArgument(4, name)
     @staticmethod
     def AsType(argumentType,argument):
         ca=CommandArgument
-        return (ca.AsInt,ca.AsBool,ca.AsStr,ca.AsVec)[argumentType]
-        pass
+        return (ca.AsInt,ca.AsBool,ca.AsStr,ca.AsVec)[argumentType](argument)
     @staticmethod
     def AsInt(argument:str):
         try: return int(argument)
@@ -224,7 +240,7 @@ class CommandArgument:
         path=options
         i=0
         while arguments[i] in path:
-            pass
+            path=path[arguments[i]]
         return
 ca=CommandArgument
 a={
@@ -235,4 +251,21 @@ a={
         'paste':(('at',ca.VEC),('rotated',ca.INT),('name',ca.STR))
         },
     }
+
+
+b={
+    ca.OPT('setspeed'):{
+        ca.INT('frequency')
+    },
+    ca.OPT('setwave'):{
+
+    },
+    ca.OPT('preset'):{
+
+    }
+}
+
+ca.OPT(
+    'setspeed',ca.INT('frequency',ca.RUN())
     
+    )
