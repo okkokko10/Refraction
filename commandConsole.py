@@ -173,6 +173,9 @@ class CommandConsoleVisual:
         letter = event.__dict__['unicode']
         key = event.__dict__['key']
         mod = event.__dict__['mod']
+        if key==pygame.K_ESCAPE:
+            self.Close()
+            return
         if key == 8:
             self.console.Backspace()
             return
@@ -242,30 +245,31 @@ class CommandArgument:
         while arguments[i] in path:
             path=path[arguments[i]]
         return
-ca=CommandArgument
-a={
-    'setspeed':('frequency',ca.INT),
-    'setwave':(('position',ca.VEC),('direction',ca.INT),('on/off',ca.BOOL)),
-    'preset':{
-        'copy':(('from',ca.VEC),('to',ca.VEC),('name',ca.STR)),
-        'paste':(('at',ca.VEC),('rotated',ca.INT),('name',ca.STR))
+if __name__=='__main__':
+    ca=CommandArgument
+    a={
+        'setspeed':('frequency',ca.INT),
+        'setwave':(('position',ca.VEC),('direction',ca.INT),('on/off',ca.BOOL)),
+        'preset':{
+            'copy':(('from',ca.VEC),('to',ca.VEC),('name',ca.STR)),
+            'paste':(('at',ca.VEC),('rotated',ca.INT),('name',ca.STR))
+            },
+        }
+
+
+    b={
+        ca.OPT('setspeed'):{
+            ca.INT('frequency')
         },
+        ca.OPT('setwave'):{
+
+        },
+        ca.OPT('preset'):{
+
+        }
     }
 
-
-b={
-    ca.OPT('setspeed'):{
-        ca.INT('frequency')
-    },
-    ca.OPT('setwave'):{
-
-    },
-    ca.OPT('preset'):{
-
-    }
-}
-
-ca.OPT(
-    'setspeed',ca.INT('frequency',ca.RUN())
-    
-    )
+    ca.OPT(
+        'setspeed',ca.INT('frequency',ca.RUN())
+        
+        )
