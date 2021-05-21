@@ -15,7 +15,7 @@ class Screen:
         while run:
             pygame.time.wait(40)
             if pygame.event.get(pygame.QUIT):
-                run=false
+                run=False
             e=pygame.event.get()
             hook(e,self)
             pygame.display.update()
