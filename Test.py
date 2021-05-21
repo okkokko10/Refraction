@@ -1,9 +1,7 @@
-def AsINT(argument):
-    try:
-        return int(argument)
-    except:
-        return
+import pygame
 
-
-a=AsINT('1.2')
-print(a)
+a=pygame.display.set_mode((800,800))
+pygame.draw.circle(
+    a,3000,(500,500),100)
+pygame.display.update()
+pygame.time.wait(1000)
