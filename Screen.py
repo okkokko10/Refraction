@@ -20,10 +20,10 @@ class Screen:
     def Loop(self,hook):
         run=True
         while run:
-            pygame.time.wait(40)
+            deltaTime=pygame.time.wait(40)
             if pygame.event.get(pygame.QUIT):
                 run=False
             e=pygame.event.get()
-            hook(e,self)
+            hook(e,self,deltaTime)
             pygame.display.update()
             
