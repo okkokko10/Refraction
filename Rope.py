@@ -7,6 +7,7 @@ class World:
         self.particles={}
         self.idIter=0
         self.speed=1
+        self.globalForces=[]
     def AddParticle(self,particle):
         self.idIter+=1
         self.particles[self.idIter]=particle
@@ -18,6 +19,9 @@ class World:
         deltaTime=self.speed
         for i in self.particles:
             self.particles[i].Update1(deltaTime,self)
+        for f in self.globalForces:
+            for i in self.particles:
+                f(self.particles[i],deltaTime)
         for i in self.particles:
             self.particles[i].Update2(deltaTime,self)
     def ScreenUpdate(self,events,screen:Screen.Screen):
@@ -28,21 +32,26 @@ class World:
             color=(0,0,0)
             screen.DrawCircle(p.pos, p.massSqrt, color)
             for i in p.GetConnections():
-                screen.DrawLine(p.pos, self.particles[i].pos, color,p.GetConnections()[i][1])
+                screen.DrawLine(p.pos, self.particles[i].pos, color,1+0.1*p.GetConnections()[i][1])
     def GetParticle(self,i):
         return self.particles[i]
+    def AddGlobalForce(self,func):
+        """ func(particle,deltaTime) """
+        self.globalForces.append(func)
 class Particle:
     def __init__(self,pos,force,mass):
         self.pos=pygame.Vector2(pos)
         self.force=pygame.Vector2(force)
         self.SetMass(mass)
         self.connections={}
+        self.anchored=False
     def SetMass(self,value):
         self.mass=value
         self.massSqrt=value**0.5
     def ApplyForce(self,force):
         self.force+=force
     def pullCoeff(self,distanceSq,length):
+        return 1-length/(distanceSq**0.5)
         return (distanceSq-length**2)/(distanceSq+length**2)
     def AttractionTo(self,other,length):
         d=other.GetPos()-self.GetPos()
@@ -55,7 +64,7 @@ class Particle:
         remove=[]
         for i in self.connections:
             if i in group:
-                f=self.AttractionTo(group[i], self.connections[i][0])*self.connections[i][1]*deltaTime
+                f=self.AttractionTo(group[i], self.connections[i][0])*self.connections[i][1]*deltaTime*self.mass*group[i].mass
                 self.ApplyForce(f)
                 group[i].ApplyForce(-f)
             else:
@@ -65,10 +74,19 @@ class Particle:
     def Update1(self,deltaTime,world):
         self.ConnectionsAttraction(deltaTime, world.particles)
     def Update2(self,deltaTime,world):
-        self.pos+=self.force/self.mass*deltaTime
+        if not self.IsAnchored():
+            self.MovePos(self.force/self.mass*deltaTime)
         #self.force*=0.9
     def GetPos(self):
         return self.pos
+    def MovePos(self,movement):
+        self.pos+=movement
+    def Anchor(self):
+        self.anchored=True
+    def Unanchor(self):
+        self.anchored=False
+    def IsAnchored(self):
+        return self.anchored
 
 
 w=World()
@@ -81,10 +99,19 @@ w=World()
 
 f1=[]
 for i in range(50):
-    f1.append(w.AddParticle(Particle((10*i+200,200),(0,0),10+i)))
+    f1.append(w.AddParticle(Particle((4*i+300,200),(0,0),10)))
     if len(f1)>1:
-        w.Connect(f1[-1], f1[-2], 10, 2+0*i/20)
-w.GetParticle(f1[-1]).ApplyForce((1000,1000))
-#w.GetParticle(f1[-1]).SetMass(100)
-w.speed=2
+        w.Connect(f1[-1], f1[-2], 4, 30)
+last=w.GetParticle(f1[-1])
+#last.ApplyForce((-100,100))
+last.SetMass(50)
+#last.MovePos((100,100))
+#last.SetMass(10)
+#last.Anchor()
+w.GetParticle(f1[0]).Anchor()
+w.GetParticle(f1[20]).ApplyForce((0,-100))
+def grav(particle:Particle,deltaTime):
+    particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*deltaTime*5)
+#w.AddGlobalForce(grav)
+w.speed=0.04
 Screen.Screen().Loop(w.ScreenUpdate)
