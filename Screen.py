@@ -17,10 +17,10 @@ class Screen:
             (int(pos[0]),int(pos[1])),
             int(radius))
         #pygame.draw.line(self.canvas,color,pos-pygame.Vector2(0,radius/2),pos+pygame.Vector2(0,radius/2),radius)
-    def Loop(self,hook):
+    def Loop(self,hook,time=40):
         run=True
         while run:
-            deltaTime=pygame.time.wait(40)
+            deltaTime=pygame.time.wait(time)
             if pygame.event.get(pygame.QUIT):
                 run=False
             e=pygame.event.get()
