@@ -10,7 +10,6 @@ class World:
         self.idIter=0
         self.speed=1
         self.globalForces=[]
-        self.partialUpdate=False
         self.midUpdates=1
     def AddParticle(self,particle):
         if isinstance(particle,tuple):
@@ -25,7 +24,7 @@ class World:
             for i in self.particles:
                 f(self.particles[i],deltaTime)
         for i in self.particles:
-            self.particles[i].Update2(deltaTime,self)
+            self.particles[i].UpdateForce(deltaTime)
     def ScreenUpdate(self,events,screen:Screen.Screen,deltaTime):
         deltaTime*=self.speed/1000
         for i in range(self.midUpdates):
@@ -60,18 +59,11 @@ class Particle:
     def InteractionsAttraction(self,deltaTime,world):
         for i in self.interactions:
             Interaction.interact(self,world.particles[i],self.interactions[i],deltaTime)
-            if self.interactions and world.partialUpdate:
-                self.UpdateMid(deltaTime,world)
+
 
     def Update1(self,deltaTime,world):
         self.InteractionsAttraction(deltaTime, world)
-    def Update2(self,deltaTime,world,disable=True):
-        if world.partialUpdate:
-            if disable and self.interactions:
-                self.appliedForceOld=self.appliedForceFrame*deltaTime
-                self.appliedForceFrame=pygame.Vector2(0,0)
-                return
-            self.appliedForceFrame+=self.appliedForce
+    def UpdateForce(self,deltaTime):
 
         self.force+=self.appliedForce*deltaTime
         self.appliedForceOld=self.appliedForce
@@ -79,9 +71,6 @@ class Particle:
         if not self.IsAnchored():
             a=self.force/self.mass*deltaTime
             self.MovePos(a)
-        #self.force*=0.9
-    def UpdateMid(self,deltaTime,world):
-        self.Update2(deltaTime,world,False)
     def GetPos(self):
         return self.pos
     def MovePos(self,movement):
