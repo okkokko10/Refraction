@@ -1,4 +1,6 @@
-from Rope import *
+import sys
+sys.path.append('c:\\Users\\Okko Heiniö\\Desktop\\Python\\Refraction')
+from RopeSets.RopePhysics import *
 w=World()
 # f1=[]
 # for i in range(50):
@@ -29,23 +31,24 @@ for i in range(l):
 w.GetParticle(p1).Anchor()
 p2=w.AddParticle(Particle((100,300),(0,0),500))
 w.ConnectSpring(p2,f2[16],0,50)
-f3=[]
-f4=[]
-s=300
-l=8
-for i in range(l):
-    f3.append(w.AddParticle(Particle((300,535+i*30),(0,0),1)))
-    f4.append(w.AddParticle(Particle((320,520+i*30),(0,0),1)))
-for i in range(l-1):
-    w.ConnectSpringRest(f3[i],f3[i+1],s)
-    w.ConnectSpringRest(f4[i],f4[i+1],s)
-    w.ConnectSpringRest(f3[i],f4[i],s)
-    w.ConnectSpringRest(f3[i],f4[i+1],s)
-w.ConnectSpringRest(f3[0],f2[0],s)
-w.ConnectSpringRest(f4[0],f2[-1],s)
-w.ConnectSpringRest(f4[0],f2[0],s)
-w.ConnectSpringRest(f4[-1],f3[-1],s)
-w.GetParticle(f3[-1]).SetMass(50)
+if False:
+    f3=[]
+    f4=[]
+    s=300
+    l=8
+    for i in range(l):
+        f3.append(w.AddParticle(Particle((300,535+i*30),(0,0),1)))
+        f4.append(w.AddParticle(Particle((320,520+i*30),(0,0),1)))
+    for i in range(l-1):
+        w.ConnectSpringRest(f3[i],f3[i+1],s)
+        w.ConnectSpringRest(f4[i],f4[i+1],s)
+        w.ConnectSpringRest(f3[i],f4[i],s)
+        w.ConnectSpringRest(f3[i],f4[i+1],s)
+    w.ConnectSpringRest(f3[0],f2[0],s)
+    w.ConnectSpringRest(f4[0],f2[-1],s)
+    w.ConnectSpringRest(f4[0],f2[0],s)
+    w.ConnectSpringRest(f4[-1],f3[-1],s)
+    w.GetParticle(f3[-1]).SetMass(50)
 
 w.speed=40
 w.midUpdates=40
