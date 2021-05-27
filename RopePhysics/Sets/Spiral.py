@@ -3,7 +3,7 @@ sys.path.append(sys.path[0][:sys.path[0].rfind('Refraction')]+'Refraction')
 from RopePhysics.MainRope import *
 import RopePhysics.Interactions.Spring
 
-
+World.AddParticle=World.OldAddParticle
 w=World()
 def grav(particle:Particle,deltaTime):
     particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*deltaTime*15)

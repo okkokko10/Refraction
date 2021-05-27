@@ -11,12 +11,12 @@ class World:
         self.speed=1
         self.globalForces=[]
         self.midUpdates=1
-    def AddParticle(self,particle):
-        if isinstance(particle,tuple):
-            particle = Particle(particle[0],particle[1],particle[2])
+    def OldAddParticle(self,particle):
         self.idIter+=1
         self.particles[self.idIter]=particle
         return self.idIter
+    def AddParticle(self,pos,force,mass):
+        return self.OldAddParticle(Particle(pos,force,mass))
     def Update(self,deltaTime):
         for i in self.particles:
             self.ParticleUpdate(i,deltaTime)

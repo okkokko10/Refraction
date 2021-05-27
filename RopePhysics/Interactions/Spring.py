@@ -9,15 +9,17 @@ def InteractSpring(world,particleID,interactionID,deltaTime):
     length,strength=I.args
     d=p1.GetPos()-p2.GetPos()
     l=d.length()
-    a=Multiplier_Spring(l,length)*strength
+    if l==0:
+        a=0
+    else:
+        # (l-length)/l
+        a=(1-length/l)*strength
     f=d*a
     p2.ApplyForce(f)
     p1.ApplyForce(-f)
 
     I.forceApplied = 2*l*a
 def Multiplier_Spring(distance,length):
-    if distance==0:
-        return 0
     return 1-length/(distance)
 def SpringInit(self):
     self.length,self.strength=self.args
@@ -34,6 +36,6 @@ def ConnectSpring(self,A,B,length,strength):
     self.GetParticle(A).AddInteraction(B,SPRING,length,strength)
 def ConnectSpringRest(self,A,B,strength):
     d=self.GetParticle(A).pos-self.GetParticle(B).pos
-    self.ConnectSpring(A,B,d.length(),strength)
+    ConnectSpring(self,A,B,d.length(),strength)
 World.ConnectSpring=ConnectSpring
 World.ConnectSpringRest=ConnectSpringRest
