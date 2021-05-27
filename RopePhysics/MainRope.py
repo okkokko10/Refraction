@@ -1,8 +1,8 @@
 import pygame
 import sys
-sys.path.append(
-'c:\\Users\\Okko Heiniö\\Desktop\\Python\\Refraction')
+sys.path.append(sys.path[0][:sys.path[0].rfind('Refraction')]+'Refraction')
 import Screen
+sys.path.pop()
 
 class World:
     def __init__(self):
