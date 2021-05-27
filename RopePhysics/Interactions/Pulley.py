@@ -29,7 +29,12 @@ def Init(self):
     pass
 
 def draw(world,particleID,interactionID,screen):
-    pass
+    p=world.GetParticle(particleID)
+    I=p.GetInteraction(interactionID)
+    width=1+0.2*I.strength**0.5
+    colorFA=Draw.ColorForceApplied(I)
+    screen.DrawLine(p.pos, world.GetParticle(interactionID[0]).pos, colorFA,width)
+    screen.DrawLine(p.pos, world.GetParticle(interactionID[1]).pos, colorFA,width)
 PULLEY=Interaction.AddType(Interact,Init,draw)
 
 def ConnectPulley(self,center,A,B,length,strength):
