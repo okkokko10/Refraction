@@ -1,6 +1,7 @@
 import sys
 sys.path.append('c:\\Users\\Okko Heiniö\\Desktop\\Python\\Refraction')
 from RopeSets.RopePhysics import *
+import RopeSets.Spring
 w=World()
 # f1=[]
 # for i in range(50):

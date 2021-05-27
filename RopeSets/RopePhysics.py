@@ -13,14 +13,11 @@ class World:
         self.partialUpdate=False
         self.midUpdates=1
     def AddParticle(self,particle):
+        if isinstance(particle,tuple):
+            particle = Particle(particle[0],particle[1],particle[2])
         self.idIter+=1
         self.particles[self.idIter]=particle
         return self.idIter
-    def ConnectSpring(self,A,B,length,strength):
-        self.particles[A].AddInteraction(B,length,strength,Interaction.SPRING)
-    def ConnectSpringRest(self,A,B,strength):
-        d=self.particles[A].pos-self.particles[B].pos
-        self.ConnectSpring(A,B,d.length(),strength)
     def Update(self,deltaTime):
         for i in self.particles:
             self.particles[i].Update1(deltaTime,self)
@@ -58,6 +55,8 @@ class Particle:
         self.interactions[otherID]=Interaction(interactionType,strength,length)
     def GetInteractions(self):
         return self.interactions
+    def GetInteraction(self,i):
+        return self.interactions[i]
     def InteractionsAttraction(self,deltaTime,world):
         for i in self.interactions:
             Interaction.interact(self,world.particles[i],self.interactions[i],deltaTime)
@@ -94,48 +93,35 @@ class Particle:
     def IsAnchored(self):
         return self.anchored
 class Interaction:
-    SPRING=0
     @staticmethod
     def interact(A,B,interaction,deltaTime):
         return Interaction.GetInteractionFunction(interaction.inType)(A,B,interaction,deltaTime)
     @staticmethod
     def GetInteractionFunction(inType):
-        if inType==Interaction.SPRING:
-            return Interaction.InteractSpring
-    @staticmethod
-    def InteractSpring(A,B,interaction,deltaTime):
-        strength,length=interaction.args
-        d=B.GetPos()-A.GetPos()
-        l=d.length()
-        a=Interaction.Multiplier_Spring(l,length)*strength
-        f=d*a
-        A.ApplyForce(f)
-        B.ApplyForce(-f)
-
-        interaction.forceApplied = l*a
-    @staticmethod
-    def Multiplier_Spring(distance,length):
-        if distance==0:
-            return 0
-        return 1-length/(distance)
+        return Interaction.types[inType][0]
     def __init__(self,interactionType,*args):
         self.inType=interactionType
         self.args=args
         self.forceApplied=0
-        self.strength,self.length=args
+        Interaction.types[interactionType][1](self)
+    types={}
+    typeIter=0
+    @staticmethod
+    def AddType(function,init,draw):
+        '''Adds a type of interaction.
+        function'''
+        Interaction.typeIter+=1
+        Interaction.types[Interaction.typeIter]=function,init,draw
+        return Interaction.typeIter
 
 class Draw:
     @staticmethod
     def World(world,screen:Screen.Screen):
         screen.Clear()
         for i in world.particles:
-            p=world.particles[i]
-            for i in p.GetInteractions():
-                I=p.GetInteractions()[i]
-                if I.inType==Interaction.SPRING:
-                    width=1+0.2*I.strength**0.5
-                    colorFA=Draw.ColorForceApplied(I)
-                    screen.DrawLine(p.pos, world.particles[i].pos, colorFA,width)
+            p=world.GetParticle(i)
+            for k in p.GetInteractions():
+                Draw.DrawInteraction(i,k,world,screen)
             color=Draw.ColorAcceleration(p)
             screen.DrawCircle(p.pos, p.massSqrt, color)
     @staticmethod
@@ -161,6 +147,13 @@ class Draw:
         )
         return c
     pass
+    @staticmethod
+    def DrawInteraction(particle,interaction,world,screen:Screen.Screen):
+        I=world.GetParticle(particle).GetInteractions()[interaction].inType
+        Draw.GetInteractionDraw(I)(particle,interaction,world,screen)
+    @staticmethod
+    def GetInteractionDraw(inType):
+        return Interaction.types[inType][2]
 
 
 def Start(world):

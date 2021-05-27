@@ -1,7 +1,7 @@
 import sys
 sys.path.append('c:\\Users\\Okko Heiniö\\Desktop\\Python\\Refraction')
 from RopeSets.RopePhysics import *
-
+import RopeSets.Spring
 w=World()
 def grav(particle:Particle,deltaTime):
     particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*deltaTime*15)
