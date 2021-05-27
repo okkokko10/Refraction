@@ -19,22 +19,27 @@ class World:
         return self.idIter
     def Update(self,deltaTime):
         for i in self.particles:
-            self.particles[i].Update1(deltaTime,self)
+            self.ParticleUpdate(i,deltaTime)
         for f in self.globalForces:
             for i in self.particles:
                 f(self.particles[i],deltaTime)
         for i in self.particles:
             self.particles[i].UpdateForce(deltaTime)
     def ScreenUpdate(self,events,screen:Screen.Screen,deltaTime):
-        deltaTime*=self.speed/1000
+        dt=deltaTime*self.speed/1000/self.midUpdates
         for i in range(self.midUpdates):
-            self.Update(deltaTime/self.midUpdates)
+            self.Update(dt)
         Draw.World(self,screen)
     def GetParticle(self,i):
         return self.particles[i]
     def AddGlobalForce(self,func):
         """ func(particle,deltaTime) """
         self.globalForces.append(func)
+    def ParticleUpdate(self,particleID,deltaTime):
+        p=self.GetParticle(particleID)
+        for interactionID in p.interactions:
+            Interaction.interact(self,particleID,interactionID,deltaTime)
+        pass
 class Particle:
     def __init__(self,pos,force,mass):
         self.pos=pygame.Vector2(pos)
@@ -50,21 +55,13 @@ class Particle:
         self.massSqrt=value**0.5
     def ApplyForce(self,force):
         self.appliedForce+=force
-    def AddInteraction(self,otherID,length,strength,interactionType):
-        self.interactions[otherID]=Interaction(interactionType,strength,length)
+    def AddInteraction(self,otherID,interactionType,*args):
+        self.interactions[otherID]=Interaction(interactionType,args)
     def GetInteractions(self):
         return self.interactions
     def GetInteraction(self,i):
         return self.interactions[i]
-    def InteractionsAttraction(self,deltaTime,world):
-        for i in self.interactions:
-            Interaction.interact(self,world.particles[i],self.interactions[i],deltaTime)
-
-
-    def Update1(self,deltaTime,world):
-        self.InteractionsAttraction(deltaTime, world)
     def UpdateForce(self,deltaTime):
-
         self.force+=self.appliedForce*deltaTime
         self.appliedForceOld=self.appliedForce
         self.appliedForce=pygame.Vector2(0,0)
@@ -83,12 +80,13 @@ class Particle:
         return self.anchored
 class Interaction:
     @staticmethod
-    def interact(A,B,interaction,deltaTime):
-        return Interaction.GetInteractionFunction(interaction.inType)(A,B,interaction,deltaTime)
+    def interact(world,particleID,interactionID,deltaTime):
+        I=world.GetParticle(particleID).GetInteraction(interactionID).inType
+        return Interaction.GetInteractionFunction(I)(world,particleID,interactionID,deltaTime)
     @staticmethod
     def GetInteractionFunction(inType):
         return Interaction.types[inType][0]
-    def __init__(self,interactionType,*args):
+    def __init__(self,interactionType,args):
         self.inType=interactionType
         self.args=args
         self.forceApplied=0
@@ -97,8 +95,15 @@ class Interaction:
     typeIter=0
     @staticmethod
     def AddType(function,init,draw):
-        '''Adds a type of interaction.
-        function'''
+        '''Adds a interaction type.
+
+        returns the interaction type's ID
+
+        function(world,particleID,interactionID,deltaTime)
+
+        init(self)
+
+        draw(world,particleID,interactionID,screen)'''
         Interaction.typeIter+=1
         Interaction.types[Interaction.typeIter]=function,init,draw
         return Interaction.typeIter
@@ -110,7 +115,7 @@ class Draw:
         for i in world.particles:
             p=world.GetParticle(i)
             for k in p.GetInteractions():
-                Draw.DrawInteraction(i,k,world,screen)
+                Draw.DrawInteraction(world,i,k,screen)
             color=Draw.ColorAcceleration(p)
             screen.DrawCircle(p.pos, p.massSqrt, color)
     @staticmethod
@@ -127,7 +132,10 @@ class Draw:
     def ColorForceApplied(interaction):
         x=interaction.forceApplied
         b=interaction.strength
-        y=(1+x/(2*b+abs(x)))/2
+        if x==0:
+            y=1/2
+        else:
+            y=(1+x/(2*b+abs(x)))/2
         z=1-y
         c=(
             int(255*y),
@@ -137,9 +145,9 @@ class Draw:
         return c
     pass
     @staticmethod
-    def DrawInteraction(particle,interaction,world,screen:Screen.Screen):
-        I=world.GetParticle(particle).GetInteractions()[interaction].inType
-        Draw.GetInteractionDraw(I)(particle,interaction,world,screen)
+    def DrawInteraction(world,particleID,interactionID,screen:Screen.Screen):
+        I=world.GetParticle(particleID).GetInteractions()[interactionID].inType
+        Draw.GetInteractionDraw(I)(world,particleID,interactionID,screen)
     @staticmethod
     def GetInteractionDraw(inType):
         return Interaction.types[inType][2]

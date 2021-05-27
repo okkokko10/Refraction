@@ -20,18 +20,18 @@ for i in range(l):
     rot=pygame.Vector2(0,200).rotate(360/l*i)
     pos=rot+pygame.Vector2(300,300)
     force=(0,0)#pygame.Vector2(0,500).rotate(360/l*i-90)
-    mass=2
+    mass=10
     f2.append(w.AddParticle(Particle(pos,force,mass)))
-p1=w.AddParticle(Particle((300,300),(0,0),10))
+P1=w.AddParticle(Particle((300,300),(0,0),10))
 for i in range(l):
     w.ConnectSpringRest(f2[i],f2[i-1],100)
     w.ConnectSpringRest(f2[i],f2[i-8],100)
     w.ConnectSpringRest(f2[i],f2[i-16],100)
-    w.ConnectSpringRest(f2[i],p1,100)
-#w.GetParticle(f2[0]).ApplyForce((100,0))
-w.GetParticle(p1).Anchor()
-p2=w.AddParticle(Particle((100,300),(0,0),500))
-w.ConnectSpring(p2,f2[16],0,50)
+    w.ConnectSpring(f2[i],P1,200,100)
+w.GetParticle(f2[0]).ApplyForce((100,0))
+w.GetParticle(P1).Anchor()
+P2=w.AddParticle(Particle((100,300),(0,0),500))
+w.ConnectSpring(P2,f2[16],0,50)
 if False:
     f3=[]
     f4=[]

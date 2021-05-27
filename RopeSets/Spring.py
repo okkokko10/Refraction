@@ -3,35 +3,38 @@ a=sys.path[0].rfind('Refraction')
 sys.path.append(sys.path[0][:a]+'Refraction')
 from RopeSets.RopePhysics import *
     
-def InteractSpring(A,B,interaction,deltaTime):
-    strength,length=interaction.args
-    d=B.GetPos()-A.GetPos()
+def InteractSpring(world,particleID,interactionID,deltaTime):
+    p1=world.GetParticle(particleID)
+    p2=world.GetParticle(interactionID)
+    I=p1.GetInteraction(interactionID)
+    length,strength=I.args
+    d=p1.GetPos()-p2.GetPos()
     l=d.length()
     a=Multiplier_Spring(l,length)*strength
     f=d*a
-    A.ApplyForce(f)
-    B.ApplyForce(-f)
+    p2.ApplyForce(f)
+    p1.ApplyForce(-f)
 
-    interaction.forceApplied = l*a
+    I.forceApplied = 2*l*a
 def Multiplier_Spring(distance,length):
     if distance==0:
         return 0
     return 1-length/(distance)
 def SpringInit(self):
-    self.strength,self.length=self.args
+    self.length,self.strength=self.args
 
-def SpringDraw(particle,interaction,world,screen):
-    p=world.GetParticle(particle)
-    I=p.GetInteraction(interaction)
+def SpringDraw(world,particleID,interactionID,screen):
+    p=world.GetParticle(particleID)
+    I=p.GetInteraction(interactionID)
     width=1+0.2*I.strength**0.5
     colorFA=Draw.ColorForceApplied(I)
-    screen.DrawLine(p.pos, world.GetParticle(interaction).pos, colorFA,width)
+    screen.DrawLine(p.pos, world.GetParticle(interactionID).pos, colorFA,width)
 SPRING=Interaction.AddType(InteractSpring,SpringInit,SpringDraw)
 
 def ConnectSpring(self,A,B,length,strength):
-    self.particles[A].AddInteraction(B,length,strength,SPRING)
+    self.GetParticle(A).AddInteraction(B,SPRING,length,strength)
 def ConnectSpringRest(self,A,B,strength):
-    d=self.particles[A].pos-self.particles[B].pos
+    d=self.GetParticle(A).pos-self.GetParticle(B).pos
     self.ConnectSpring(A,B,d.length(),strength)
 World.ConnectSpring=ConnectSpring
 World.ConnectSpringRest=ConnectSpringRest
