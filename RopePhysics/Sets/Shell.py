@@ -6,9 +6,8 @@ import RopePhysics.Interactions.Spring
 import RopePhysics.Interactions.Pulley
 
 w=World()
-def grav(particle:Particle,deltaTime):
-    particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*15)
-w.AddGlobalForce(grav)
+import RopePhysics.Interactions.GlobalForces
+RopePhysics.Interactions.GlobalForces.AddGravity(w,15)
 L=16
 h=15
 s=100

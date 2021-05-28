@@ -5,9 +5,8 @@ import RopePhysics.Interactions.Spring
 
 World.AddParticle=World.OldAddParticle
 w=World()
-def grav(particle:Particle,deltaTime):
-    particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*15)
-w.AddGlobalForce(grav)
+import RopePhysics.Interactions.GlobalForces
+RopePhysics.Interactions.GlobalForces.AddGravity(w,15)
 center=pygame.Vector2(400,400)
 l=360
 r=40
