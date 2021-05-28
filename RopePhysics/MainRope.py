@@ -8,7 +8,7 @@ class Interaction:
     @staticmethod
     def interact(world,particleID,interactionID,deltaTime):
         I=world.GetParticle(particleID).GetInteraction(interactionID).inType
-        return Interaction.GetInteractionFunction(I)(world,particleID,interactionID,deltaTime)
+        return Interaction.GetInteractionFunction(I)(world,particleID,interactionID)
     @staticmethod
     def GetInteractionFunction(inType):
         return Interaction.types[inType][0]
@@ -25,7 +25,7 @@ class Interaction:
 
         returns the interaction type's ID
 
-        func(world,particleID,interactionID,deltaTime)
+        func(world,particleID,interactionID)
 
         init(self)
 
@@ -33,6 +33,10 @@ class Interaction:
         Interaction.typeIter+=1
         Interaction.types[Interaction.typeIter]=func,init,draw
         return Interaction.typeIter
+    def LogAppliedForce(self,force):
+        self.forceApplied+=force
+    def ResetAppliedForce(self):
+        self.forceApplied=0
 
 class Particle:
     def __init__(self,pos,force,mass):
@@ -58,10 +62,13 @@ class Particle:
     def UpdateForce(self,deltaTime):
         self.force+=self.appliedForce*deltaTime
         self.appliedForceOld=self.appliedForce
+        self.appliedForceFrame+=self.appliedForce*deltaTime
         self.appliedForce=pygame.Vector2(0,0)
         if not self.IsAnchored():
             a=self.force/self.mass*deltaTime
             self.MovePos(a)
+    def PreUpdate(self):
+        self.appliedForceFrame=pygame.Vector2(0,0)
     def GetPos(self):
         return self.pos
     def MovePos(self,movement):
@@ -94,8 +101,9 @@ class Draw:
         )
         return c
     @staticmethod
-    def ColorForceApplied(interaction):
+    def ColorForceApplied(interaction:Interaction):
         x=interaction.forceApplied
+        interaction.ResetAppliedForce()
         b=interaction.strength
         if x==0:
             y=1/2
@@ -138,8 +146,12 @@ class World:
                 f(self.particles[i],deltaTime)
         for i in self.particles:
             self.particles[i].UpdateForce(deltaTime)
+    def PreUpdate(self):
+        for i in self.particles:
+            self.particles[i].PreUpdate()
     def ScreenUpdate(self,events,screen:Screen.Screen,deltaTime):
         dt=deltaTime*self.speed/1000/self.midUpdates
+        self.PreUpdate()
         for i in range(self.midUpdates):
             self.Update(dt)
         Draw.World(self,screen)

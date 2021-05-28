@@ -2,7 +2,7 @@ import sys
 sys.path.append(sys.path[0][:sys.path[0].rfind('Refraction')]+'Refraction')
 from RopePhysics.MainRope import *
 
-def Interact(world:World,particleID,interactionID,deltaTime):
+def Interact(world:World,particleID,interactionID):
 
     C=world.GetParticle(particleID)#center
     I=C.GetInteraction(interactionID)#interaction

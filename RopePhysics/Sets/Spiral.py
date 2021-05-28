@@ -6,12 +6,12 @@ import RopePhysics.Interactions.Spring
 World.AddParticle=World.OldAddParticle
 w=World()
 def grav(particle:Particle,deltaTime):
-    particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*deltaTime*15)
+    particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*15)
 w.AddGlobalForce(grav)
 center=pygame.Vector2(400,400)
 l=360
 r=40
-s=40
+s=200
 p=w.AddParticle(Particle(center,(0,0),10))
 f1=[]
 for i in range(l):
@@ -28,7 +28,7 @@ for i in range(l):
     # if i-2*r-1>0:
     #     w.ConnectSpringRest(f1[max(i-2*r-1,0)],f1[i],s)
 w.GetParticle(p).Anchor()
-for i in range(1):
+for i in range(r):
     w.ConnectSpringRest(f1[i],p,s)
 
 w.speed=5

@@ -2,7 +2,7 @@ import sys
 sys.path.append(sys.path[0][:sys.path[0].rfind('Refraction')]+'Refraction')
 from RopePhysics.MainRope import *
     
-def InteractSpring(world:World,particleID,interactionID,deltaTime):
+def InteractSpring(world:World,particleID,interactionID):
     p1=world.GetParticle(particleID)
     p2=world.GetParticle(interactionID)
     I=p1.GetInteraction(interactionID)
@@ -18,7 +18,7 @@ def InteractSpring(world:World,particleID,interactionID,deltaTime):
     p2.ApplyForce(f)
     p1.ApplyForce(-f)
 
-    I.forceApplied = 2*l*a
+    I.LogAppliedForce(2*l*a)
 def Multiplier_Spring(distance,length):
     return 1-length/(distance)
 def SpringInit(self):

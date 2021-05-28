@@ -14,7 +14,7 @@ w=World()
 # w.GetParticle(f1[0]).Anchor()
 # w.ConnectSpring(f1[0],w.AddParticle(Particle((500,200),(0,0),50)),200,30)
 def grav(particle:Particle,deltaTime):
-    particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*deltaTime*15)
+    particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*1)
 w.AddGlobalForce(grav)
 l=64
 f2=[]
