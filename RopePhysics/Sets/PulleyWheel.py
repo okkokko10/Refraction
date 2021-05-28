@@ -8,7 +8,6 @@ w=World()
 def grav(particle:Particle,deltaTime):
     particle.ApplyForce(pygame.Vector2(0,1)*particle.mass*deltaTime*15)
 w.AddGlobalForce(grav)
-
 # f1=[]
 # l=16
 # for i in range(l):

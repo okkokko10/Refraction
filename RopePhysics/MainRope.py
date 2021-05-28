@@ -4,42 +4,36 @@ sys.path.append(sys.path[0][:sys.path[0].rfind('Refraction')]+'Refraction')
 import Screen
 sys.path.pop()
 
-class World:
-    def __init__(self):
-        self.particles={}
-        self.idIter=0
-        self.speed=1
-        self.globalForces=[]
-        self.midUpdates=1
-    def OldAddParticle(self,particle):
-        self.idIter+=1
-        self.particles[self.idIter]=particle
-        return self.idIter
-    def AddParticle(self,pos,force,mass):
-        return self.OldAddParticle(Particle(pos,force,mass))
-    def Update(self,deltaTime):
-        for i in self.particles:
-            self.ParticleUpdate(i,deltaTime)
-        for f in self.globalForces:
-            for i in self.particles:
-                f(self.particles[i],deltaTime)
-        for i in self.particles:
-            self.particles[i].UpdateForce(deltaTime)
-    def ScreenUpdate(self,events,screen:Screen.Screen,deltaTime):
-        dt=deltaTime*self.speed/1000/self.midUpdates
-        for i in range(self.midUpdates):
-            self.Update(dt)
-        Draw.World(self,screen)
-    def GetParticle(self,i):
-        return self.particles[i]
-    def AddGlobalForce(self,func):
-        """ func(particle,deltaTime) """
-        self.globalForces.append(func)
-    def ParticleUpdate(self,particleID,deltaTime):
-        p=self.GetParticle(particleID)
-        for interactionID in p.interactions:
-            Interaction.interact(self,particleID,interactionID,deltaTime)
-        pass
+class Interaction:
+    @staticmethod
+    def interact(world,particleID,interactionID,deltaTime):
+        I=world.GetParticle(particleID).GetInteraction(interactionID).inType
+        return Interaction.GetInteractionFunction(I)(world,particleID,interactionID,deltaTime)
+    @staticmethod
+    def GetInteractionFunction(inType):
+        return Interaction.types[inType][0]
+    def __init__(self,interactionType,args):
+        self.inType=interactionType
+        self.args=args
+        self.forceApplied=0
+        Interaction.types[interactionType][1](self)
+    types={}
+    typeIter=0
+    @staticmethod
+    def AddType(func,init,draw):
+        '''Adds a interaction type.
+
+        returns the interaction type's ID
+
+        func(world,particleID,interactionID,deltaTime)
+
+        init(self)
+
+        draw(world,particleID,interactionID,screen)'''
+        Interaction.typeIter+=1
+        Interaction.types[Interaction.typeIter]=func,init,draw
+        return Interaction.typeIter
+
 class Particle:
     def __init__(self,pos,force,mass):
         self.pos=pygame.Vector2(pos)
@@ -59,7 +53,7 @@ class Particle:
         self.interactions[otherID]=Interaction(interactionType,args)
     def GetInteractions(self):
         return self.interactions
-    def GetInteraction(self,i):
+    def GetInteraction(self,i) -> Interaction:
         return self.interactions[i]
     def UpdateForce(self,deltaTime):
         self.force+=self.appliedForce*deltaTime
@@ -78,35 +72,6 @@ class Particle:
         self.anchored=False
     def IsAnchored(self):
         return self.anchored
-class Interaction:
-    @staticmethod
-    def interact(world,particleID,interactionID,deltaTime):
-        I=world.GetParticle(particleID).GetInteraction(interactionID).inType
-        return Interaction.GetInteractionFunction(I)(world,particleID,interactionID,deltaTime)
-    @staticmethod
-    def GetInteractionFunction(inType):
-        return Interaction.types[inType][0]
-    def __init__(self,interactionType,args):
-        self.inType=interactionType
-        self.args=args
-        self.forceApplied=0
-        Interaction.types[interactionType][1](self)
-    types={}
-    typeIter=0
-    @staticmethod
-    def AddType(function,init,draw):
-        '''Adds a interaction type.
-
-        returns the interaction type's ID
-
-        function(world,particleID,interactionID,deltaTime)
-
-        init(self)
-
-        draw(world,particleID,interactionID,screen)'''
-        Interaction.typeIter+=1
-        Interaction.types[Interaction.typeIter]=function,init,draw
-        return Interaction.typeIter
 
 class Draw:
     @staticmethod
@@ -152,6 +117,42 @@ class Draw:
     def GetInteractionDraw(inType):
         return Interaction.types[inType][2]
 
+class World:
+    def __init__(self):
+        self.particles={}
+        self.idIter=0
+        self.speed=1
+        self.globalForces=[]
+        self.midUpdates=1
+    def OldAddParticle(self,particle):
+        self.idIter+=1
+        self.particles[self.idIter]=particle
+        return self.idIter
+    def AddParticle(self,pos,force,mass):
+        return self.OldAddParticle(Particle(pos,force,mass))
+    def Update(self,deltaTime):
+        for i in self.particles:
+            self.ParticleUpdate(i,deltaTime)
+        for f in self.globalForces:
+            for i in self.particles:
+                f(self.particles[i],deltaTime)
+        for i in self.particles:
+            self.particles[i].UpdateForce(deltaTime)
+    def ScreenUpdate(self,events,screen:Screen.Screen,deltaTime):
+        dt=deltaTime*self.speed/1000/self.midUpdates
+        for i in range(self.midUpdates):
+            self.Update(dt)
+        Draw.World(self,screen)
+    def GetParticle(self,i) -> Particle:
+        return self.particles[i]
+    def AddGlobalForce(self,func):
+        """ func(particle,deltaTime) """
+        self.globalForces.append(func)
+    def ParticleUpdate(self,particleID,deltaTime):
+        p=self.GetParticle(particleID)
+        for interactionID in p.interactions:
+            Interaction.interact(self,particleID,interactionID,deltaTime)
+        pass
 
 def Start(world):
     Screen.Screen().Loop(world.ScreenUpdate,20)
