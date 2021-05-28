@@ -16,6 +16,7 @@ class Interaction:
         self.inType=interactionType
         self.args=args
         self.forceApplied=0
+        self.midUpdates=1
         Interaction.types[interactionType][1](self)
     types={}
     typeIter=0
@@ -35,7 +36,10 @@ class Interaction:
         return Interaction.typeIter
     def LogAppliedForce(self,force):
         self.forceApplied+=force
-    def ResetAppliedForce(self):
+    def GetAppliedForce(self):
+        return self.forceApplied/self.midUpdates
+    def ResetAppliedForce(self,midUpdates):
+        self.midUpdates=midUpdates
         self.forceApplied=0
 
 class Particle:
@@ -67,8 +71,10 @@ class Particle:
         if not self.IsAnchored():
             a=self.force/self.mass*deltaTime
             self.MovePos(a)
-    def PreUpdate(self):
+    def PreUpdate(self,midUpdates):
         self.appliedForceFrame=pygame.Vector2(0,0)
+        for i in self.GetInteractions():
+            self.GetInteraction(i).ResetAppliedForce(midUpdates)
     def GetPos(self):
         return self.pos
     def MovePos(self,movement):
@@ -102,8 +108,7 @@ class Draw:
         return c
     @staticmethod
     def ColorForceApplied(interaction:Interaction):
-        x=interaction.forceApplied
-        interaction.ResetAppliedForce()
+        x=interaction.GetAppliedForce()
         b=interaction.strength
         if x==0:
             y=1/2
@@ -148,7 +153,7 @@ class World:
             self.particles[i].UpdateForce(deltaTime)
     def PreUpdate(self):
         for i in self.particles:
-            self.particles[i].PreUpdate()
+            self.particles[i].PreUpdate(self.midUpdates)
     def ScreenUpdate(self,events,screen:Screen.Screen,deltaTime):
         dt=deltaTime*self.speed/1000/self.midUpdates
         self.PreUpdate()

@@ -43,5 +43,7 @@ w.ConnectSpringRest(b1,b2,s1)
 w.GetParticle(a1).Anchor()
 w.GetParticle(b1).Anchor()
 
+w.speed=10
+w.midUpdates=20
 
 Start(w)
