@@ -155,6 +155,7 @@ class World:
         for i in self.particles:
             self.particles[i].PreUpdate(self.midUpdates)
     def ScreenUpdate(self,events,screen:Screen.Screen,deltaTime):
+        self.ScreenEventHook(events,screen)
         dt=deltaTime*self.speed/1000/self.midUpdates
         self.PreUpdate()
         for i in range(self.midUpdates):
@@ -169,6 +170,9 @@ class World:
         p=self.GetParticle(particleID)
         for interactionID in p.interactions:
             Interaction.interact(self,particleID,interactionID,deltaTime)
+        pass
+    def ScreenEventHook(self,events,screen):
+        """Overload this to interact with the World"""
         pass
 
 def Start(world):

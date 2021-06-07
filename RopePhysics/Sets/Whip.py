@@ -3,6 +3,7 @@ sys.path.append(sys.path[0][:sys.path[0].rfind('Refraction')]+'Refraction')
 from RopePhysics.MainRope import *
 import RopePhysics.Interactions.Spring
 import RopePhysics.Interactions.Pulley
+import RopePhysics.Show
 
 w=World()
 import RopePhysics.Interactions.GlobalForces
