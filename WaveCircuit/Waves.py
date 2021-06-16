@@ -128,6 +128,9 @@ class WaveArray:
     def Update(self, events, screen):
         self.UpdateInputs(events, screen)
         self.UpdateState()
+        self.UpdateHook()
+    def UpdateHook(self):
+        pass
 
     def UpdateInputs(self, events, screen):
         for e in events:
@@ -518,5 +521,8 @@ a = WaveArray.LoadedFrom('WaveCircuit\Wavefile.obj')
 S = Screen(_scale, _scrSize)
 #S.ChangeSettings('text', False)
 #S.ChangeSettings('unpoweredKnobs', False)
+import commandArgument
+commandArgument.CreateWaves(a)
+
 S.Loop(a, _timer)
 a.SaveTo('WaveCircuit\Wavefile.obj')
