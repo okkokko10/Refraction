@@ -239,7 +239,7 @@ class CommandArgument:
         else: return
     @staticmethod
     def Parse(command:str,options):
-        arguments = split(command)
+        arguments = command.split()
         path=options
         i=0
         while arguments[i] in path:

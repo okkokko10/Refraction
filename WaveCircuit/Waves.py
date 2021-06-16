@@ -513,10 +513,10 @@ def FromFile(filename):
 _scale = 60
 _timer = 40
 _scrSize = 1000, 700
-a = WaveArray.LoadedFrom('Wavefile.obj')
+a = WaveArray.LoadedFrom('WaveCircuit\Wavefile.obj')
 #a = WaveArray()
 S = Screen(_scale, _scrSize)
 #S.ChangeSettings('text', False)
 #S.ChangeSettings('unpoweredKnobs', False)
 S.Loop(a, _timer)
-a.SaveTo('Wavefile.obj')
+a.SaveTo('WaveCircuit\Wavefile.obj')
