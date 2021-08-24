@@ -94,8 +94,11 @@ class Draw:
             p=world.GetParticle(i)
             for k in p.GetInteractions():
                 Draw.DrawInteraction(world,i,k,screen)
-            color=Draw.ColorAcceleration(p)
+            color=Draw.ParticleColor(p)
             screen.DrawCircle(p.pos, p.massSqrt, color)
+    @staticmethod
+    def ParticleColor(particle):
+        return Draw.ColorAcceleration(particle)
     @staticmethod
     def ColorAcceleration(particle):
         x=particle.appliedForceOld.length_squared()/(particle.mass**2)
@@ -136,6 +139,7 @@ class World:
         self.idIter=0
         self.speed=1
         self.globalForces=[]
+        self.screenEventFuncs=[]
         self.midUpdates=1
     def OldAddParticle(self,particle):
         self.idIter+=1
@@ -172,8 +176,12 @@ class World:
             Interaction.interact(self,particleID,interactionID,deltaTime)
         pass
     def ScreenEventHook(self,events,screen):
-        """Overload this to interact with the World"""
-        pass
+        #"""Overload this to interact with the World"""
+        for f in self.screenEventFuncs:
+            f(self,events,screen)
+    def AddScreenEventFunc(self,func):
+        '''ScreenEventHook(self,events,screen)'''
+        self.screenEventFuncs.append(func)
 
 def Start(world):
-    Screen.Screen().Loop(world.ScreenUpdate,20)
+    Screen.Screen().Loop(world.ScreenUpdate,20,False)

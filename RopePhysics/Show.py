@@ -34,4 +34,4 @@ def NearestParticle(self:World,pos):
         return None
 
 
-World.ScreenEventHook=ScreenEventHook
+World.AddScreenEventFunc(ScreenEventHook)
