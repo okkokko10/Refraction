@@ -77,7 +77,7 @@ if True:
                 w.GetParticle(f1[iwX][y]).Anchor()
 
 impactParticle=w.GetParticle(f1[impactX][he+impactX//2])
-impactParticle.waveZvel=100
+impactParticle.waveZvel=10
 # impactParticle.ApplyForce(pygame.Vector2(-1,0))
 # for i in range(1):
 #     for p in f1[i]:
@@ -85,13 +85,11 @@ impactParticle.waveZvel=100
 #         impactParticle.waveZvel=1
 
 
-def updateWave(self:World,events,screen):
-    for i in self.particles:
-        p=self.particles[i]
-        p.waveZvel+=p.waveZchange
-        p.waveZ+=p.waveZvel
-        p.waveZchange=0
-w.AddScreenEventFunc(updateWave)
+def updateWave(p,deltaTime):
+    p.waveZvel+=p.waveZchange
+    p.waveZ+=p.waveZvel
+    p.waveZchange=0
+w.AddGlobalForce(updateWave)
 
 from RopePhysics.Show import NearestParticle as NearPar
 def pluckIt(self:World,events,screen):
@@ -130,14 +128,18 @@ def particleColor(particle):
     #x=fo.length_squared()*10
     # y=x/(x+1)
     Y=lambda x: x/(x+1)
-    Y2=lambda x: (1+x/(abs(x)+1))/2
-    x=fo.x*10
-    a=(x>0)#*Y(x)
+    # Y2=lambda x: (1+x/(abs(x)+1))/2
+    # x=fo.x*10
+    # a=(x>0)#*Y(x)
     b=0
-    c=(x<0)#*Y(-x)
-    if particle.waveZ!=None:
+    # c=(x<0)#*Y(-x)
+    if particle.waveZ:
         a=Y(max(particle.waveZ,0))
         c=Y(max(-particle.waveZ,0))
+    else:
+        return None
+    if particle.waveZ<0.1:
+        return None
     color=(
         int(255*a),
         int(255*b),

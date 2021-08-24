@@ -94,7 +94,11 @@ class Draw:
             p=world.GetParticle(i)
             for k in p.GetInteractions():
                 Draw.DrawInteraction(world,i,k,screen)
-            color=Draw.ParticleColor(p)
+                Draw.DrawParticle(p,screen)
+    @staticmethod
+    def DrawParticle(p:Particle,screen:Screen.Screen):
+        color=Draw.ParticleColor(p)
+        if color:
             screen.DrawCircle(p.pos, p.massSqrt, color)
     @staticmethod
     def ParticleColor(particle):
